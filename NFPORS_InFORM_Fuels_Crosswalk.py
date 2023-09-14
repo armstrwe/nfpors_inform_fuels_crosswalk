@@ -138,10 +138,101 @@ column_mapping = {
 # Rename the columns in the DataFrame using the mapping
 df.rename(columns=column_mapping, inplace=True)
 
+# Add any InFORM Fuels fields that are not in the dataframe
+inForm_fields_all = [
+"OBJECTID",
+"Name",
+"EstimatedTreatmentID",
+"EstimatedActivityID",
+"ActualTreatmentID",
+"ActualActivityID",
+"IsPoint",
+"ParentID",
+"ParentObjectID",
+"IsParentTreatment",
+"LocalID",
+"Type",
+"Category",
+"Class",
+"OwnershipUnit",
+"OwnershipRegion",
+"OwnershipAgency",
+"OwnershipDepartment",
+"CongressionalDistrictNumber",
+"TribeName",
+"County",
+"State",
+"Latitude",
+"Longitude",
+"CalculatedAcres",
+"Durability",
+"Priority",
+"Feasibility",
+"IsWUI",
+"IsFunded",
+"IsApproved",
+"EstimatedSuccessProbability",
+"InitiationDate",
+"InitiationFiscalYear",
+"InitiationFiscalQuarter",
+"CompletionDate",
+"CompletionFiscalYear",
+"CompletionFiscalQuarter",
+"CostCenter",
+"FunctionalArea",
+"WBS",
+"CostCode",
+"FundingSource",
+"FundingDepartment",
+"FundingAgency",
+"FundingRegion",
+"FundingUnit",
+"FundingSubUnit",
+"FundingTribe",
+"FundingUnitID",
+"EstimatedPersonnelCost",
+"EstimatedAssetCost",
+"EstimatedContractualCost",
+"EstimatedGrantsFixedCost",
+"EstimatedOtherCost",
+"EstimatedTotalCost",
+"Notes",
+"LocalApprovalDate",
+"RegionalApprovalDate",
+"AgencyApprovalDate",
+"DepartmentApprovalDate",
+"FundedDate",
+"Status",
+"StatusReason",
+"IsArchived",
+"LastModifiedDate",
+"LastModifiedBy",
+"CreatedOnDate",
+"CreatedBy",
+"CancelledDate",
+"BILFunding",
+"Vegetation Departure Percentage",
+"Vegetation Departure Index",
+"TreatmentDriver",
+"FundingUnitType"
+]
 
+
+# Iterate over the list of columns to check
+for column_name in inForm_fields_all:
+    # Check if the column exists in the DataFrame
+    if column_name not in df.columns:
+        # If not, add the column with default values (NaN)
+        df[column_name] = None  # You can set default values here
+
+
+# Reorder columns based on InFORM Fuels column list
+df = df[inForm_fields_all]
 
 # Reorder the columns in the DataFrame to match the mapping
-df = df[column_mapping.values()]
+#df = df[column_mapping.values()]
+
+
 
 # Write the modified DataFrame to the output CSV
 df.to_csv(inform_table, index=False)
