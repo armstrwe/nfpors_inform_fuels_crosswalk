@@ -10,7 +10,7 @@ import sys
 import pandas as pd
 
 # Replace these file paths with your actual file paths
-nfpors_table = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\hfr_allhazfuelsdata_doi_all.xlsx'
+nfpors_table = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\NfPORS_forTesting.xlsx'
 inform_table = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\InFormFuelsFeatureCsvExtract BIA.csv'
 
 
@@ -34,8 +34,54 @@ inform_table = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFOR
 #    print("Error: Unable to read the CSV file with any encoding.")
 
 #------------------------------------------------------------
+# Columns to include in the dataframe. Make sure it matches the NFPORS table inputs/field mapping dictionary 
 
-df = pd.read_excel(nfpors_table)
+columns_to_include = [
+    "ActivityTreatmentName",
+    "ActivityTreatmentID",
+    "TreatmentLocalIdentifier",
+    "TypeName",
+    "CategoryName",
+    "Class",
+    "ProjectLatitude",
+    "ProjectLongitude",
+    "PlannedAcres",
+    "IsWui",
+    "PlannedInitiationDate",
+    "PlannedInitiationFiscalYear",
+    "PlannedInitiationFiscalQuarter",
+    "WBSProjectCode",
+    "PlannedDirectCost",
+    "DepartmentName",
+    "BureauName",
+    "RegionName",
+    "UnitName",
+    "SubUnitName",
+    "NwcgUnitID",
+    "ForceAccountCost",
+    "ServiceContractCost",
+    "CoopAgreementCost",
+    "PlannedDirectCost",
+    "ActivityTreatmentNotes",
+    "LocalApprovalDate",
+    "RegionalApprovalDate",
+    "BureauApprovalDate",
+    "BILFunding",
+    "TreatmentDriver"
+]
+
+
+# Specify the data type for lat / long. Convert to string. 
+# dtype_specification = {
+#     "TreatmentLatitude": str,
+#     "TreatmentLongitude": str
+# }
+
+# Read the input Excel file into a Pandas DataFrame with specified columns
+#df = pd.read_excel(nfpors_table, usecols=columns_to_include, dtype=dtype_specification)
+df = pd.read_excel(nfpors_table, usecols=columns_to_include)
+
+
 
 # Check if the DataFrame was successfully loaded
 if df is None:
@@ -51,21 +97,21 @@ column_mapping = {
     "TypeName": "Type",
     "CategoryName": "Category",
     "Class": "Class",
-    "TreatmentLatitude": "Latitude",
-    "TreatmentLongitude": "Longitude",
+    "ProjectLatitude": "Latitude",
+    "ProjectLongitude": "Longitude",
     "PlannedAcres": "CalculatedAcres",
     "IsWui": "IsWUI",
     "PlannedInitiationDate": "InitiationDate",
     "PlannedInitiationFiscalYear": "InitiationFiscalYear",
     "PlannedInitiationFiscalQuarter": "InitiationFiscalQuarter",
-    "WBS": "WBS",
+    "WBSProjectCode": "WBS",
     "PlannedDirectCost": "FundingSource",
     "DepartmentName": "FundingDepartment",
     "BureauName": "FundingAgency",
     "RegionName": "FundingRegion",
     "UnitName": "FundingUnit",
     "SubUnitName": "FundingSubUnit",
-    "NWCGUnitID": "FundingUnitID",
+    "NwcgUnitID": "FundingUnitID",
     "ForceAccountCost": "EstimatedPersonnelCost",
     "ServiceContractCost": "EstimatedContractualCost",
     "CoopAgreementCost": "EstimatedGrantsFixedCost",
@@ -78,8 +124,24 @@ column_mapping = {
     "TreatmentDriver": "TreatmentDriver",
 }
 
+
+
+
+# column_mapping = {
+#     "ActivityTreatmentName": "Name",
+#     "BureauName": "FundingAgency",
+#     "TreatmentLatitude": "Latitude",
+#     "TreatmentLongitude": "Longitude",
+    
+# }
+
 # Rename the columns in the DataFrame using the mapping
 df.rename(columns=column_mapping, inplace=True)
+
+
+
+# Reorder the columns in the DataFrame to match the mapping
+df = df[column_mapping.values()]
 
 # Write the modified DataFrame to the output CSV
 df.to_csv(inform_table, index=False)
