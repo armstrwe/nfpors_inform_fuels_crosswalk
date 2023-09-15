@@ -10,7 +10,7 @@ import sys
 import pandas as pd
 
 # Replace these file paths with your actual file paths
-nfpors_table = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\NfPORS_forTesting.xlsx'
+nfpors_table = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\Edited BIA_3year_data_for_Import_9_14_23 TESTING.xlsx'
 inform_table = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\InFormFuelsFeatureCsvExtract BIA.csv'
 
 
@@ -66,7 +66,27 @@ columns_to_include = [
     "RegionalApprovalDate",
     "BureauApprovalDate",
     "BILFunding",
-    "TreatmentDriver"
+    "TreatmentDriver",
+    "ProjectLatitude",
+    "ProjectLongitude",
+    "AcresMonitored",
+    "BILGeneralFunds",
+    "BILThinningFunds",
+    "BILPrescribedFireFunds",
+    "BILControlLocationsFunds",
+    "BILLaborersFunds",
+    "GranteeCost",
+    "ProjectNotes",
+    "BILEstimatedPersonnelCost",
+    "BILEstimatedAssetCost",
+    "BILEstimatedContractualCost",
+    "BILEstimatedGrantsFixedCost",
+    "BILEstimatedOtherCost",
+    "EstimatedSuccessProbability",
+    "ImplementationFeasibility",
+    "EstimatedDurability",
+    "TreatmentPriority",
+   
 ]
 
 
@@ -119,6 +139,8 @@ column_mapping = {
     "BureauApprovalDate": "AgencyApprovalDate",
     "BILFunding": "BILFunding",
     "TreatmentDriver": "TreatmentDriver",
+    "EstimatedDurability":"Durability",
+    "EstimatedSuccessProbability":"Priority",
 }
 
 
@@ -141,7 +163,9 @@ df["EstimatedTotalCost"] = df["FundingSource"]
 df["EstimatedActivityID"] = df["EstimatedTreatmentID"]
 
 
-# Add any InFORM Fuels fields that are not in the dataframe
+# Add any InFORM Fuels fields that are not in the dataframe. Also add additional 
+# nfpors fields for calculations and logic. Remove additional nfpors fields before saving to InFORM Fuels. 
+
 inForm_fields_all = [
 "OBJECTID",
 "Name",
@@ -217,13 +241,49 @@ inForm_fields_all = [
 "Vegetation Departure Percentage",
 "Vegetation Departure Index",
 "TreatmentDriver",
-"FundingUnitType"
+"FundingUnitType",
+"ProjectLatitude",
+"ProjectLongitude",
+"AcresMonitored",
+"BILGeneralFunds",
+"BILThinningFunds",
+"BILPrescribedFireFunds",
+"BILControlLocationsFunds",
+"BILLaborersFunds",
+"GranteeCost",
+"ProjectNotes",
+"BILEstimatedPersonnelCost",
+"BILEstimatedAssetCost",
+"BILEstimatedContractualCost",
+"BILEstimatedGrantsFixedCost",
+"BILEstimatedOtherCost",
+
+]
+
+# Fields to delete before saving to InFORM Fuels. 
+del_fields = [
+"ProjectLatitude",
+"ProjectLongitude",
+"AcresMonitored",
+"BILGeneralFunds",
+"BILThinningFunds",
+"BILPrescribedFireFunds",
+"BILControlLocationsFunds",
+"BILLaborersFunds",
+"GranteeCost",
+"ProjectNotes",
+"BILEstimatedPersonnelCost",
+"BILEstimatedAssetCost",
+"BILEstimatedContractualCost",
+"BILEstimatedGrantsFixedCost",
+"BILEstimatedOtherCost",
 ]
 
 
-# Iterate over the list of columns to check
+
+# Iterate over the list of columns to check if they exist in the DataFrame
 for column_name in inForm_fields_all:
-    # Check if the column exists in the DataFrame
+    
     if column_name not in df.columns:
         # If not, add the column with default values (NaN)
         df[column_name] = None  # You can set default values here
@@ -234,6 +294,43 @@ df = df[inForm_fields_all]
 
 # Reorder the columns in the DataFrame to match the mapping
 #df = df[column_mapping.values()]
+
+
+# ------------------------------------------------------------
+# Add specific field transformations and multiple input column logic here
+
+# latitude
+# Activities use nfpors field "ProjectLatitude"
+# If "Class" is Activity use Project Lat/Long
+# Define the column you want to search and the columns you want to update
+
+# search_column = 'Class'
+# lat_update_column = 'OtherColumn'
+# lat_update_column = 'OtherColumn'
+
+# # Define the search and replace strings
+# search_string = 'test'
+# replace_string = 'test update'
+# replacement_value = 'test int'
+
+# # Iterate through the DataFrame rows
+# for index, row in df.iterrows():
+#     text_value = row[search_column]
+    
+#     # Check if the search string is present in the text value
+#     if search_string in text_value:
+#         # Replace the search string with the replace string in the text column
+#         df.at[index, search_column] = text_value.replace(search_string, replace_string)
+        
+#         # Update the value in the other column with the replacement value
+#         df.at[index, update_column] = replacement_value
+
+
+# longitude 
+# Activities use nfpors field "ProjectLongitude"
+
+
+
 
 
 
