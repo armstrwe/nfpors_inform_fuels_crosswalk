@@ -61,7 +61,6 @@ columns_to_include = [
     "ForceAccountCost",
     "ServiceContractCost",
     "CoopAgreementCost",
-    "PlannedDirectCost",
     "ActivityTreatmentNotes",
     "LocalApprovalDate",
     "RegionalApprovalDate",
@@ -73,9 +72,9 @@ columns_to_include = [
 
 # Specify the data type for lat / long. Convert to string. 
 # dtype_specification = {
-#     "TreatmentLatitude": str,
-#     "TreatmentLongitude": str
-# }
+#     "PlannedDirectCost": 'float'
+#}
+
 
 # Read the input Excel file into a Pandas DataFrame with specified columns
 #df = pd.read_excel(nfpors_table, usecols=columns_to_include, dtype=dtype_specification)
@@ -92,7 +91,6 @@ if df is None:
 column_mapping = {
     "ActivityTreatmentName": "Name",
     "ActivityTreatmentID": "EstimatedTreatmentID",
-    "ActivityTreatmentID": "EstimatedActivityID",  
     "TreatmentLocalIdentifier": "LocalID",
     "TypeName": "Type",
     "CategoryName": "Category",
@@ -115,7 +113,6 @@ column_mapping = {
     "ForceAccountCost": "EstimatedPersonnelCost",
     "ServiceContractCost": "EstimatedContractualCost",
     "CoopAgreementCost": "EstimatedGrantsFixedCost",
-    "PlannedDirectCost": "EstimatedTotalCost",
     "ActivityTreatmentNotes": "Notes",
     "LocalApprovalDate": "LocalApprovalDate",
     "RegionalApprovalDate": "RegionalApprovalDate",
@@ -137,6 +134,12 @@ column_mapping = {
 
 # Rename the columns in the DataFrame using the mapping
 df.rename(columns=column_mapping, inplace=True)
+
+# Handling input NFPORS fields that go to more than one InFORM Fuels field
+# copy the 1st reasigned column to a new column
+df["EstimatedTotalCost"] = df["FundingSource"]
+df["EstimatedActivityID"] = df["EstimatedTreatmentID"]
+
 
 # Add any InFORM Fuels fields that are not in the dataframe
 inForm_fields_all = [
