@@ -7,6 +7,7 @@
 
 import os
 import sys
+import uuid
 import pandas as pd
 import arcpy
 from collections import Counter
@@ -27,6 +28,39 @@ if arcpy.Exists(gdb_path):
 arcpy.CreateFileGDB_management(os.path.dirname(gdb_path), os.path.basename(gdb_path))
 # Set the workspace to your file geodatabase
 arcpy.env.workspace = gdb_path  
+
+# Derivation layers
+
+# WFDSS Jurisdictional Agency
+WFDSS_Jurisdictional_Agency = r'C:\Users\warmstrong\Documents\Data\Jurisdictional\07272023 Jurisdictional_Unit_(Public).gdb\470746db-06af-4720-b20a-e530856939c7.gdb\WFDSS_Jurisdictional_Agency'
+
+# Tribe Name
+tribe_name = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\data.gdb\TribeName'
+
+# State
+states = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\data.gdb\States'
+
+
+# functions
+def describe(layer):
+     # Establish a Describe object for the table
+    desc = arcpy.Describe(layer)
+
+    # Create a list to store the field names (headers)
+    field_names = []
+
+    # Loop through the fields in the table and append their names to the list
+    for field in desc.fields:
+        field_names.append(field.name)
+
+    # Print the list of field names
+    print(f"\n\nField Names for {layer}:")
+    for field_name in field_names:
+        print(field_name)
+
+
+
+
 
 #------------------------------------------------------------
 # CSV file encoding detection
@@ -415,6 +449,11 @@ for column_name in inForm_nfpors_all:
 # Reorder columns based on InFORM Fuels column list
 df = df[inForm_nfpors_all]
 
+# Add a GUID for geospatial joins
+# Add a new column 'GUID' with generated GUIDs
+df['GUID'] = [str(uuid.uuid4()) for _ in range(len(df))]
+
+
 # allColumns(df)
 # sys.exit()
 
@@ -435,21 +474,7 @@ gis_derivation_table_fullPath = f'{gdb_path}\\{gis_derivation_table}'
 
 # Describe the header row of the file geodatabase table
 
-
- # Establish a Describe object for the table
-desc = arcpy.Describe(f'{gdb_path}\\{gis_derivation_table}')
-
-# Create a list to store the field names (headers)
-field_names = []
-
-# Loop through the fields in the table and append their names to the list
-for field in desc.fields:
-    field_names.append(field.name)
-
-# Print the list of field names
-print("Field Names:")
-for field_name in field_names:
-    print(field_name)
+describe(gis_derivation_table_fullPath)
 
 #------------------------------------------------------------
 
@@ -477,14 +502,15 @@ update_fields = [
     "FundingSource", # [18]
     "BILFunding", # [19]
     "Notes", # [20]
-    "ProjectNotes" # [21]
+    "ProjectNotes", # [21]
+    "EstimatedTotalCost" # [22]
 ]
 
 
 
-for f in update_fields:
-    if f not in field_names:
-        print ("\n\n"+f + " not in fields")
+# for f in update_fields:
+#     if f not in field_names:
+#         print ("\n\n"+f + " not in fields")
 
 # Open an update cursor to loop through the feature class
 with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, update_fields) as cursor:
@@ -512,6 +538,7 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, update_fields) as curs
         BILFunding = row[19]
         Notes = row[20]
         ProjectNotes = row[21]
+        EstimatedTotalCost =row[22]
         
         # latitude / longitude calculation
         # If "Class" == Activity,  Latitude = ProjectLatitude, Longitude = ProjectLongitude. Else, as is. 
@@ -575,55 +602,90 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, update_fields) as curs
 
 
 # ------------------------------------------------------------
-# Add specific field transformations and multiple input column logic here
+# Create points feature class from table
+
+# Convert Table to Points
+Points_Feature_Class = os.path.join(gdb_path, "InFormFuelsFeatureCsvExtract_Points")
+arcpy.management.XYTableToPoint(gis_derivation_table_fullPath, Points_Feature_Class, x_field="Longitude", y_field="Latitude", z_field="", coordinate_system="GEOGCS[\"GCS_WGS_1984\",DATUM[\"D_WGS_1984\",SPHEROID[\"WGS_1984\",6378137.0,298.257223563]],PRIMEM[\"Greenwich\",0.0],UNIT[\"Degree\",0.0174532925199433]];-400 -400 1000000000;-100000 10000;-100000 10000;8.98315284119521E-09;0.001;0.001;IsHighPrecision")
+
+# Add Spatial Index 
+Indexed_Points = arcpy.management.AddSpatialIndex(in_features=Points_Feature_Class, spatial_grid_1=0, spatial_grid_2=0, spatial_grid_3=0)
 
 
 
-# latitude
-# Activities use nfpors field "ProjectLatitude"
-# 1. If "Class" == Activity,  Latitude = ProjectLatitude, Longitude = ProjectLongitude. Else, as is. 
+#------------------------------------------------------------
+# Derivation for Jurisdictional Unit
 
+# Spatial Join Jurisdictional Agency to Points
 
+arcpy.analysis.SpatialJoin(Indexed_Points, WFDSS_Jurisdictional_Agency, "JU_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="GUID \"GUID\" true true false 8000 Text 0 0,First,#,points,GUID,0,8000;JurisdictionalUnitName \"JurisdictionalUnitName\" true true false 100 Text 0 0,First,#,WFDSS_Jurisdictional_Agency,JurisdictionalUnitName,0,100;LegendLandownerCategory \"LegendLandownerCategory\" true true false 20 Text 0 0,First,#,WFDSS_Jurisdictional_Agency,LegendLandownerCategory,0,20;LandownerDepartment \"LandownerDepartment\" true true false 80 Text 0 0,First,#,WFDSS_Jurisdictional_Agency,LandownerDepartment,0,80", match_option="INTERSECT", search_radius="", distance_field_name="")
 
+describe("JU_sj")
 
+# Initialize an empty dictionary
+ju_dict = {}
 
+# Jurisdictional Unit fields 
+fields = ["GUID", "LandownerDepartment", "JurisdictionalUnitName", "LegendLandownerCategory", ]
 
-
-
-
-
-
-
-# 3. FundingSource/PlannedDirectCost 
-
-# 4. FundingUnit/UnitName. For BIA, there is a crosswalk in MBS code. Nothing to do?
-
-#
-
-# search_column = 'Class'
-# lat_update_column = 'OtherColumn'
-# lat_update_column = 'OtherColumn'
-
-# # Define the search and replace stringsvc
-# search_string = 'test'
-# replace_string = 'test update'
-# replacement_value = 'test int'
-
-# # Iterate through the DataFrame rows
-# for index, row in df.iterrows():
-#     text_value = row[search_column]
-    
-#     # Check if the search string is present in the text value
-#     if search_string in text_value:
-#         # Replace the search string with the replace string in the text column
-#         df.at[index, search_column] = text_value.replace(search_string, replace_string)
+# Use a search cursor to iterate through the data and populate the dictionary
+with arcpy.da.SearchCursor("JU_sj", fields) as cursor:
+    for row in cursor:
+        guid = row[0] 
+        land_dept = row[1]
+        jur_name = row[2]
+        legend_cat = row[3] 
         
-#         # Update the value in the other column with the replacement value
-#         df.at[index, update_column] = replacement_value
+        val_list = [land_dept, jur_name, legend_cat]
+        
+        ju_dict[guid] = val_list
+
+for v in ju_dict:
+    
+    # split_values = [value.split(",") for value in ju_dict[v]]
+    print (ju_dict[v])
+
+    # Print the resulting list
+    #print(split_values)
 
 
-# longitude 
-# Activities use nfpors field "ProjectLongitude"
+fields = ["GUID", "OwnershipDepartment", "OwnershipUnit", "OwnershipAgency"]
+with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
+    for row in cursor:
+        guid = row[0]
+        if guid in ju_dict:
+            row[1] = ju_dict[guid][0]
+            row[2] = ju_dict[guid][1]
+            row[3] = ju_dict[guid][2]
+        # Update the feature with the new values
+        cursor.updateRow(row)
+
+
+with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
+    for row in cursor:
+        print(row[1])
+        print(row[2])
+        print(row[3])
+
+
+#------------------------------------------------------------
+
+# Tribe Name derivation 
+
+
+#------------------------------------------------------------
+
+# State Derivation
+
+
+# Spatial Join states to points
+  
+arcpy.analysis.SpatialJoin(Indexed_Points, states, "states_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="GUID \"GUID\" true true false 8000 Text 0 0,First,#,C:\\Users\\warmstrong\\Documents\\work\\InFORM\\20230912 NFPORS InFORM Crosswalk Script\\data input\\data.gdb\\InFormFuelsFeatureCsvExtract_Points,GUID,0,8000;STATE_NAME \"STATE_NAME\" true true false 25 Text 0 0,First,#,States,STATE_NAME,0,25", match_option="INTERSECT", search_radius="", distance_field_name="")
+
+
+
+
+
 
 
 
