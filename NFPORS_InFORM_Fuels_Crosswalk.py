@@ -29,7 +29,12 @@ arcpy.CreateFileGDB_management(os.path.dirname(gdb_path), os.path.basename(gdb_p
 # Set the workspace to your file geodatabase
 arcpy.env.workspace = gdb_path  
 
+# enable overwriting
+arcpy.env.overwriteOutput = True
+
 # Derivation layers
+
+# IF ANY LAYERS ARE CHANGED - NEED TO VERIFY THE FIELDS IN THE DERIVATION SECTION BELOW
 
 # WFDSS Jurisdictional Agency
 WFDSS_Jurisdictional_Agency = r'C:\Users\warmstrong\Documents\Data\Jurisdictional\07272023 Jurisdictional_Unit_(Public).gdb\470746db-06af-4720-b20a-e530856939c7.gdb\WFDSS_Jurisdictional_Agency'
@@ -39,6 +44,21 @@ tribe_name = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM 
 
 # State
 states = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\data.gdb\States'
+
+# County
+county = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\data.gdb\CountyName'
+
+# Regions 
+bia_regions = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\data.gdb\BIA_Region'
+
+# Congressional Districts
+con_districts = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\USA_118th_Congressional_Districts.gdb\56f52086-3918-488c-b058-92bc23d4d20a.gdb\USA_118th_Congressional_Districts'
+
+# US Veg Departure
+us_vegDep = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\BIA Crosswalk\US_220VDEP'
+
+# Hawai Veg Departure
+hi_vegDep = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\data.gdb\HI_220VDEP'
 
 
 # functions
@@ -303,8 +323,9 @@ inForm_fields_all = [
 "CreatedBy",
 "CancelledDate",
 "BILFunding",
-"Vegetation Departure Percentage",
-"Vegetation Departure Index",
+"VegDeparturePercentageManual",
+"VegDeparturePercentageDerived",
+"IsVegetationManual",
 "TreatmentDriver",
 "FundingUnitType"
 
@@ -385,8 +406,9 @@ inForm_nfpors_all = [
 "CreatedBy",
 "CancelledDate",
 "BILFunding",
-"Vegetation Departure Percentage",
-"Vegetation Departure Index",
+"VegDeparturePercentageManual",
+"VegDeparturePercentageDerived",
+"IsVegetationManual",
 "TreatmentDriver",
 "FundingUnitType",
 "ProjectLatitude",
@@ -620,12 +642,12 @@ Indexed_Points = arcpy.management.AddSpatialIndex(in_features=Points_Feature_Cla
 
 arcpy.analysis.SpatialJoin(Indexed_Points, WFDSS_Jurisdictional_Agency, "JU_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="GUID \"GUID\" true true false 8000 Text 0 0,First,#,points,GUID,0,8000;JurisdictionalUnitName \"JurisdictionalUnitName\" true true false 100 Text 0 0,First,#,WFDSS_Jurisdictional_Agency,JurisdictionalUnitName,0,100;LegendLandownerCategory \"LegendLandownerCategory\" true true false 20 Text 0 0,First,#,WFDSS_Jurisdictional_Agency,LegendLandownerCategory,0,20;LandownerDepartment \"LandownerDepartment\" true true false 80 Text 0 0,First,#,WFDSS_Jurisdictional_Agency,LandownerDepartment,0,80", match_option="INTERSECT", search_radius="", distance_field_name="")
 
-describe("JU_sj")
+# describe("JU_sj")
 
 # Initialize an empty dictionary
 ju_dict = {}
 
-# Jurisdictional Unit fields 
+# Spatial Join Jurisdictional Units fields
 fields = ["GUID", "LandownerDepartment", "JurisdictionalUnitName", "LegendLandownerCategory", ]
 
 # Use a search cursor to iterate through the data and populate the dictionary
@@ -640,15 +662,15 @@ with arcpy.da.SearchCursor("JU_sj", fields) as cursor:
         
         ju_dict[guid] = val_list
 
-for v in ju_dict:
+#for v in ju_dict:
     
     # split_values = [value.split(",") for value in ju_dict[v]]
-    print (ju_dict[v])
+    #print (ju_dict[v])
 
     # Print the resulting list
     #print(split_values)
 
-
+# InFORM Fuels fields
 fields = ["GUID", "OwnershipDepartment", "OwnershipUnit", "OwnershipAgency"]
 with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
     for row in cursor:
@@ -661,11 +683,11 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
         cursor.updateRow(row)
 
 
-with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
-    for row in cursor:
-        print(row[1])
-        print(row[2])
-        print(row[3])
+# with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
+#     for row in cursor:
+#         print(row[1])
+#         print(row[2])
+#         print(row[3])
 
 
 #------------------------------------------------------------
@@ -681,6 +703,257 @@ with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
 # Spatial Join states to points
   
 arcpy.analysis.SpatialJoin(Indexed_Points, states, "states_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="GUID \"GUID\" true true false 8000 Text 0 0,First,#,C:\\Users\\warmstrong\\Documents\\work\\InFORM\\20230912 NFPORS InFORM Crosswalk Script\\data input\\data.gdb\\InFormFuelsFeatureCsvExtract_Points,GUID,0,8000;STATE_NAME \"STATE_NAME\" true true false 25 Text 0 0,First,#,States,STATE_NAME,0,25", match_option="INTERSECT", search_radius="", distance_field_name="")
+
+# Initialize an empty dictionary
+state_dict = {}
+
+# Spatial Join State fields
+fields = ["GUID", "STATE_NAME"]
+
+# Use a search cursor to iterate through the data and populate the dictionary
+with arcpy.da.SearchCursor("states_sj", fields) as cursor:
+    for row in cursor:
+        guid = row[0] 
+        state = row[1]
+
+   #     print (guid, state)
+       
+        val_list = [state]
+        
+        state_dict[guid] = val_list
+
+
+
+
+
+# for v in state_dict:
+    
+    # split_values = [value.split(",") for value in ju_dict[v]]
+    # print (state_dict[v])
+
+    # Print the resulting list
+    #print(split_values)
+
+
+
+# InFORM Fuels fields
+fields = ["GUID", "State"]
+with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
+    for row in cursor:
+        guid = row[0]
+        if guid in state_dict:
+            row[1] = state_dict[guid][0]
+           
+        # Update the feature with the new values
+        cursor.updateRow(row)
+
+# with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
+#     for row in cursor:
+#         print(row[1])
+
+
+#------------------------------------------------------------
+# 
+# County Derivation 
+arcpy.analysis.SpatialJoin(Indexed_Points, county, "county_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="GUID \"GUID\" true true false 255 Text 0 0,First,#,C:\\Users\\warmstrong\\Documents\\work\\InFORM\\20230912 NFPORS InFORM Crosswalk Script\\data input\\data.gdb\\InFormFuelsFeatureCsvExtract_Points,GUID,0,8000;CountyName \"CountyName\" true true false 255 Text 0 0,First,#,CountyName,CountyName,0,255", match_option="INTERSECT", search_radius="", distance_field_name="")
+
+
+# describe("county_sj")
+# sys.exit()
+
+
+# fields = ["CountyName"]
+# with arcpy.da.SearchCursor("county_sj", fields) as cursor:
+#      for row in cursor:
+#          print(row[0])
+
+
+
+# sys.exit()
+
+
+# Initialize an empty dictionary
+county_dict = {}
+
+# Spatial Join State fields
+fields = ["GUID", "CountyName"]
+
+# Use a search cursor to iterate through the data and populate the dictionary
+with arcpy.da.SearchCursor("county_sj", fields) as cursor:
+    for row in cursor:
+        guid = row[0] 
+        county = row[1]
+       
+        val_list = [county]
+        
+        county_dict[guid] = val_list
+
+
+# InFORM Fuels fields
+fields = ["GUID", "County"]
+with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
+    for row in cursor:
+        guid = row[0]
+        if guid in state_dict:
+            row[1] = county_dict[guid][0]
+           
+        # Update the feature with the new values
+        cursor.updateRow(row)
+
+
+# with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
+#      for row in cursor:
+#          print(row[1])
+
+
+
+
+#------------------------------------------------------------
+
+# Region Derivation - For BIA, it's BIA Region
+
+# Spatial Join regions to points
+arcpy.analysis.SpatialJoin(Indexed_Points, bia_regions, "regions_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="GUID \"GUID\" true true false 8000 Text 0 0,First,#,InFormFuelsFeatureCsvExtract_Points,GUID,0,8000;REGIONNAME \"REGIONNAME\" true true false 2000000000 Text 0 0,First,#,BIA_Region,REGIONNAME,0,2000000000", match_option="INTERSECT", search_radius="", distance_field_name="")
+
+describe("regions_sj")
+
+# Initialize an empty dictionary
+region_dict = {}
+
+# Spatial Join State fields
+fields = ["GUID", "REGIONNAME"]
+
+# Use a search cursor to iterate through the data and populate the dictionary
+with arcpy.da.SearchCursor("regions_sj", fields) as cursor:
+    for row in cursor:
+        guid = row[0] 
+        region = row[1]
+       
+        val_list = [region]
+        
+        region_dict[guid] = val_list
+
+
+# InFORM Fuels fields
+fields = ["GUID", "OwnershipRegion"]
+with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
+    for row in cursor:
+        guid = row[0]
+        if guid in region_dict:
+            row[1] = region_dict[guid][0]
+           
+        # Update the feature with the new values
+        cursor.updateRow(row)
+
+# with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
+#      for row in cursor:
+#         print(row[1])
+
+
+#----------------------------------------------------------------------------
+
+# Congressional District Derivation
+
+arcpy.analysis.SpatialJoin(Indexed_Points, con_districts, "cd_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="GUID \"GUID\" true true false 8000 Text 0 0,First,#,C:\\Users\\warmstrong\\Documents\\work\\InFORM\\20230912 NFPORS InFORM Crosswalk Script\\data input\\data.gdb\\InFormFuelsFeatureCsvExtract_Points,GUID,0,8000;DISTRICTID \"District ID\" true true false 4 Text 0 0,First,#,USA_118th_Congressional_Districts,DISTRICTID,0,4;STATE_ABBR \"State Abbreviation\" true true false 2 Text 0 0,First,#,USA_118th_Congressional_Districts,STATE_ABBR,0,2", match_option="INTERSECT", search_radius="", distance_field_name="") 
+
+# describe("cd_sj")
+
+# Initialize an empty dictionary
+cd_dict = {}
+
+# Spatial Join Congressional District fields
+fields = ["GUID", "DISTRICTID", "STATE_ABBR"]
+
+# Use a search cursor to iterate through the data and populate the dictionary
+with arcpy.da.SearchCursor("cd_sj", fields) as cursor:
+    for row in cursor:
+        guid = row[0] 
+        district = row[1]
+        state_abv = row[2]
+       
+        val_list = [f"{state_abv}-{district}"]
+        
+        cd_dict[guid] = val_list
+
+
+# InFORM Fuels fields
+fields = ["GUID", "CongressionalDistrictNumber"]
+with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
+    for row in cursor:
+        guid = row[0]
+        if guid in cd_dict:
+            row[1] = cd_dict[guid][0]
+           
+        # Update the feature with the new values
+        cursor.updateRow(row)
+
+# with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
+#      for row in cursor:
+#          print(row[1])
+
+
+#---------------------------------------------------------------------------------- 
+
+# Vegetation Departure Derivation
+# US Veg Departure
+
+# Extract raster Veg Departure Values to Points 
+
+def vdep(layer):
+
+    arcpy.sa.ExtractValuesToPoints(Indexed_Points, layer, "vegDp_extract", interpolate_values="NONE", add_attributes="VALUE_ONLY")
+
+
+    describe("vegDp_extract")
+
+    # Initialize an empty dictionary
+    vegDep_dict = {}
+
+    # Spatial Join Congressional District fields
+    fields = ["GUID", "RASTERVALU"]
+
+    # Use a search cursor to iterate through the data and populate the dictionary
+    with arcpy.da.SearchCursor("vegDp_extract", fields) as cursor:
+        for row in cursor:
+            guid = row[0] 
+            vd = row[1]
+        
+            val_list = [vd]
+        
+            vegDep_dict[guid] = val_list
+
+
+    # InFORM Fuels fields
+    fields = ["GUID", "VegDeparturePercentageDerived"]
+
+    with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
+        for row in cursor:
+            guid = row[0]
+            if guid in vegDep_dict:
+                row[1] = vegDep_dict[guid][0]
+           
+            # Update the feature with the new values
+            cursor.updateRow(row)
+
+    with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
+        for row in cursor:
+            print(row[1])
+
+
+# run vegetation departure derivation on US Veg Departure and HI Veg Departure
+
+veg_departure_layers = [us_vegDep, hi_vegDep]
+
+for layer in veg_departure_layers:
+    vdep(layer)
+
+
+
+sys.exit()
+
+
+
+
 
 
 
