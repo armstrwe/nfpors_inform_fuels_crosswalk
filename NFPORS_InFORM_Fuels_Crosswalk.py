@@ -42,6 +42,9 @@ WFDSS_Jurisdictional_Agency = r'C:\Users\warmstrong\Documents\Data\Jurisdictiona
 # Tribe Name
 tribe_name = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\data.gdb\TribeName'
 
+# Tribal Leaders
+tribal_leaders = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\data.gdb\Tribal_Leaders_table'
+
 # State
 states = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\data.gdb\States'
 
@@ -118,6 +121,8 @@ columns_to_include = [
     "Class",
     "ProjectLatitude",
     "ProjectLongitude",
+    "TreatmentLatitude",
+    "TreatmentLongitude",
     "PlannedAcres",
     "IsWui",
     "PlannedInitiationDate",
@@ -140,8 +145,6 @@ columns_to_include = [
     "BureauApprovalDate",
     "BILFunding",
     "TreatmentDriver",
-    "ProjectLatitude",
-    "ProjectLongitude",
     "AcresMonitored",
     "BILGeneralFunds",
     "BilThinningFunds",
@@ -197,15 +200,15 @@ column_mapping = {
     "TypeName": "Type",
     "CategoryName": "Category",
     "Class": "Class",
-    "ProjectLatitude": "Latitude",
-    "ProjectLongitude": "Longitude",
+    "TreatmentLatitude": "Latitude",
+    "TreatmentLongitude": "Longitude",
     "PlannedAcres": "CalculatedAcres",
     "IsWui": "IsWUI",
     "PlannedInitiationDate": "InitiationDate",
     "PlannedInitiationFiscalYear": "InitiationFiscalYear",
     "PlannedInitiationFiscalQuarter": "InitiationFiscalQuarter",
     "WBSProjectCode": "WBS",
-    "PlannedDirectCost": "FundingSource",
+    "PlannedDirectCost": "FundingSource", # couldn't use "PlannedDirectCost" twice. Funding Source = Planned direct 
     "DepartmentName": "FundingDepartment",
     "BureauName": "FundingAgency",
     "RegionName": "FundingRegion",
@@ -245,8 +248,8 @@ df.rename(columns=column_mapping, inplace=True)
 
 # Handling input NFPORS fields that go to more than one InFORM Fuels field
 # copy the 1st reasigned column to a new column
-df["EstimatedTotalCost"] = df["FundingSource"]
-df["EstimatedActivityID"] = df["EstimatedTreatmentID"]
+df["EstimatedTotalCost"] = df["FundingSource"]  # PlannedDirectCost -> FundingSource -> EstimatedTotalCost
+df["EstimatedActivityID"] = df["EstimatedTreatmentID"] # ActivityTreatmentID -> EstimatedTreatmentID -> EstimatedActivityID
 
 
 # All InFORM Fuels columns
@@ -411,7 +414,7 @@ inForm_nfpors_all = [
 "IsVegetationManual",
 "TreatmentDriver",
 "FundingUnitType",
-"ProjectLatitude",
+"ProjectLatitude",  # project lat long for Activity class
 "ProjectLongitude",
 "AcresMonitored",
 "BILGeneralFunds",
@@ -429,7 +432,7 @@ inForm_nfpors_all = [
 "BILEstimatedOtherCost",
 # "EstimatedSuccessProbability", # this was added and renamed in the mapping 
 "ImplementationFeasibility",
-"EstimatedDurability",  
+"Durability",  
 "TreatmentPriority"
 
 
@@ -496,7 +499,9 @@ gis_derivation_table_fullPath = f'{gdb_path}\\{gis_derivation_table}'
 
 # Describe the header row of the file geodatabase table
 
-describe(gis_derivation_table_fullPath)
+# describe(gis_derivation_table_fullPath)
+
+
 
 #------------------------------------------------------------
 
@@ -504,7 +509,7 @@ describe(gis_derivation_table_fullPath)
 
 update_fields = [
     "Class", # [0]
-    "Latitude", # [1]
+    "Latitude", # [1] This was set to TreatmentLatitude, but should be ProjectLatitude for Activity Class
     "Longitude", # [2]
     "ProjectLatitude", # [3]
     "ProjectLongitude", # [4] 
@@ -525,7 +530,13 @@ update_fields = [
     "BILFunding", # [19]
     "Notes", # [20]
     "ProjectNotes", # [21]
-    "EstimatedTotalCost" # [22]
+    "EstimatedTotalCost", # [22]
+    "Category", # [23]
+    "EstimatedPersonnelCost", # [24]
+    "EstimatedAssetCost", # [25]
+    "EstimatedContractualCost", # [26]
+    "EstimatedGrantsFixedCost",# [27]
+    "EstimatedOtherCost", # [28]
 ]
 
 
@@ -556,74 +567,169 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, update_fields) as curs
         BILEstimatedGrantsFixedCost = row[15]
         BILEstimatedOtherCost = row[16]
         IsPoint = row[17]
-        FundingSource =row[18]
+        FundingSource = row[18]
         BILFunding = row[19]
         Notes = row[20]
         ProjectNotes = row[21]
-        EstimatedTotalCost =row[22]
+        EstimatedTotalCost = row[22]
+        category = row[23]
+        
+        
         
         # latitude / longitude calculation
         # If "Class" == Activity,  Latitude = ProjectLatitude, Longitude = ProjectLongitude. Else, as is. 
-        if Class == "Activity":
-            Latitude  = ProjectLatitude
-            Longitude = ProjectLongitude
+        if Class.rstrip().lower() == "activity":
 
-        # Calculated Acres
+            # print (f"Activity found. Original lat/long {Latitude}, {Longitude}")
+
+            row[1]  = ProjectLatitude
+            row[2] = ProjectLongitude
+
+            # print (f"Activity found: Updated lat/long {row[1]}, {row[2]}")
+
+        # Calculated Acres / is Point
         #If Class is Activity (Column W) default to 10 acres, unless...they crosswalk in as "program management, 
         # (and a few others) " - then they should be flagged as "is Point" and an acres of (X?) assigned
         # Acres Monitored - Should replace the 0 from Acres planned when present
+
+        # print(f"class {Class}, category {category}")
         
-        if Class == "Activity":
-            if AcresMonitored is not None and AcresMonitored >0:
-                CalculatedAcres = AcresMonitored
-                IsPoint = 0
-            else:                              
-                CalculatedAcres = 10
-                IsPoint = 0
+        if CalculatedAcres is None or CalculatedAcres == 0:
+            if AcresMonitored is not None and AcresMonitored > 0:
+                row[6] = AcresMonitored
+
+        if Class.rstrip().lower() == "activity":
+            row[6] = 10
+            row[17] = 0
+
         
-        elif Class == "Program Management":
-            CalculatedAcres = 1
-            IsPoint = 1
+        # print(f"class {Class.lower()}, category {category.lower()}")
+        elif Class.rstrip().lower() == "activity" and category.lower().rstrip() == "program management":
+            print(f"found program management")
+            row[6] = 1
+            row[17] = 1
+           
         
         # Funding Source
 
-        # If there is a 1 in "PlannedDirectCost" (converted to "FundingSource"), look through "BILGeneralFunds","BILThinningFunds",	
+        # If "PlannedDirectCost" (converted to "FundingSource") >= 1, look through "BILGeneralFunds","BILThinningFunds",	
         # "BILPrescribedFireFunds","BILControlLocationsFunds","BILLaborersFunds", for funding source. Else leave as is.
 
-        if FundingSource == 1:
+        if FundingSource >= 1:
+            bil_total = 0
             if BILGeneralFunds is not None and BILGeneralFunds >0:
-                FundingSource = BILGeneralFunds
-            elif BilThinningFunds is not None and BilThinningFunds >0:
-                FundingSource = BilThinningFunds
-            elif BILPrescribedFireFunds is not None and BILPrescribedFireFunds >0:
-                FundingSource = BILPrescribedFireFunds
-            elif BILControlLocationsFunds is not None and BILControlLocationsFunds >0:
-                FundingSource = BILControlLocationsFunds
-            elif BilLaborersFunds is not None and BilLaborersFunds >0:
-                FundingSource = BilLaborersFunds
+                bil_total += BILGeneralFunds
+            if BilThinningFunds is not None and BilThinningFunds >0:
+                bil_total += BilThinningFunds
+            if BILPrescribedFireFunds is not None and BILPrescribedFireFunds >0:
+                bil_total += BILPrescribedFireFunds
+            if BILControlLocationsFunds is not None and BILControlLocationsFunds >0:
+                bil_total += BILControlLocationsFunds
+            if BilLaborersFunds is not None and BilLaborersFunds >0:
+                bil_total += BilLaborersFunds
+                
+            row[18] = bil_total
             
         # PlannedDirectCost -> EstimatedTotalCost. 
         # If planned direct costs are <=1  and BIL funding >= 1, use the BIL Funding Total and columns FC- FG to populate total cost and component cost fields
 
-        if EstimatedTotalCost <= 1 and BILFunding >= 1:
-            EstimatedTotalCost = BILFunding
-            EstimatedPersonnelCost = BILEstimatedPersonnelCost
-            EstimatedAssetCost = BILEstimatedAssetCost
-            EstimatedContractualCost = BILEstimatedContractualCost
-            EstimatedGrantsFixedCost = BILEstimatedGrantsFixedCost  #GranteeCost?
-            EstimatedOtherCost = BILEstimatedOtherCost
+        if EstimatedTotalCost is not None and EstimatedTotalCost <= 1 and BILFunding is not None and BILFunding >= 1:
+            
+            row[22] = BILFunding
+            row[24] = BILEstimatedPersonnelCost
+            row[25] = BILEstimatedAssetCost
+            row[26] = BILEstimatedContractualCost
+            row[27] = BILEstimatedGrantsFixedCost  
+            row[28] = BILEstimatedOtherCost
+            
 
         # Project Notes
         # Should not overwrite the ActivityTreament Notes, 
         # but should be brough over if ActivityTreatmentNotes are blank
         if Notes is None or Notes == "":
-            Notes = ProjectNotes
+            row[20] = ProjectNotes
 
         # Update the feature with the new values
         cursor.updateRow(row)
 
 
+# sys.exit()
+
 # ------------------------------------------------------------
+# NFPORS to InFORM Fuels domain crosswalk
+
+table_data = {
+    "Biological": ["Biological", "Biocontrol"],
+    "Biomass Removal": ["Mechanical", "Biomass Removal"],
+    "Broadcast Burn": ["Planned Ignition", "Broadcast"],
+    "Risk Assessment": ["Assessment", "Community"],
+    "Mitigation Plan": ["Document Preparation", "Community Protection Plan"],
+    "Mitigation Plan - Federal Land (fs)": ["Document Preparation", "Community Protection Plan"],
+    "Mitigation Plan - Non-Federal Land (fs)": ["Document Preparation", "Community Protection Plan"],
+    "Consultation - ESA": ["Compliance", "Endangered Species Act"],
+    "Mastication": ["Mechanical", "Grinding, Chipping, Crushing, Mowing"],
+    "Mastication/Mowing": ["Mechanical", "Grinding, Chipping, Crushing, Mowing"],
+    "Chipping": ["Mechanical", "Grinding, Chipping, Crushing, Mowing"],
+    "Crushing": ["Mechanical", "Grinding, Chipping, Crushing, Mowing"],
+    "Mowing": ["Mechanical", "Grinding, Chipping, Crushing, Mowing"],
+    "Chemical": ["Chemical", "Herbicide"],
+    "Grazing": ["Biological", "Herbivory"],
+    "Lop and Scatter": ["Mechanical", "Lop and Scatter"],
+    "Monitoring": ["Data Collection", "Monitoring"],
+    "Appeals and Litigation": ["Compliance", "National Environmental Policy Act"],
+    "Nepa - CATX": ["Compliance", "National Environmental Policy Act"],
+    "Nepa - EA": ["Compliance", "National Environmental Policy Act"],
+    "Nepa - EIS": ["Compliance", "National Environmental Policy Act"],
+    "Nepa - HFI CATX": ["Compliance", "National Environmental Policy Act"],
+    "Nepa - HFRA EA": ["Compliance", "National Environmental Policy Act"],
+    "Nepa - HFRA EIS": ["Compliance", "National Environmental Policy Act"],
+    "Nepa - Not Required": ["Compliance", "National Environmental Policy Act"],
+    "Consultation - SHPO": ["Compliance", "National Historic Preservation Act"],
+    "Hand Pile": ["Mechanical", "Pile"],
+    "Machine Pile": ["Mechanical", "Pile"],
+    "Jackpot Burn": ["Mechanical", "Pile"],
+    "Hand Pile Burn": ["Planned Ignition", "Pile Burn"],
+    "Machine Pile Burn": ["Planned Ignition", "Pile Burn"],
+    "Seeding": ["Biological", "Seeding"],
+    "Thinning": ["Mechanical", "Thinning"],
+    "Tribal Indirect": ["Program Management", "Tribal Indirect"],
+    "Fire Use": ["Unplanned Ignition", "Wildfire"],
+    "Treatment Perimeter Data Management": ["Program Management", "Wildland Fire"],
+    "Contract Administration": ["Program Management", "Wildland Fire"],
+    "Contract Preparation": ["Program Management", "Wildland Fire"],
+}
+
+crosswalk_fields = ["Type", "Category"]
+
+with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, crosswalk_fields) as cursor:
+    for row in cursor:
+        # Extract values from the current row
+        typename = row[0]
+        category = row[1] 
+       
+        # print (f"nfpors typename {typename}, category {category}")
+
+        # Check if the NFPORS typename exists in the table data dictionary
+        for t in table_data:
+            
+            # print(f"crosswalk typename {t}, category {table_data[t][0]}, type {table_data[t][1]}")
+
+            if typename.upper() == t.upper():
+
+                print (f"Match found {t}")
+                # Update Category and Type based on the dictionary values
+                row[0] = table_data[t][1]  # Update Type
+                row[1] = table_data[t][0]  # Update Category
+
+                print (f"InFORM Fuels type {row[0]}, category {row[1]}")
+
+       
+            
+        cursor.updateRow(row)
+
+
+
+#------------------------------------------------------------
 # Create points feature class from table
 
 # Convert Table to Points
@@ -633,7 +739,7 @@ arcpy.management.XYTableToPoint(gis_derivation_table_fullPath, Points_Feature_Cl
 # Add Spatial Index 
 Indexed_Points = arcpy.management.AddSpatialIndex(in_features=Points_Feature_Class, spatial_grid_1=0, spatial_grid_2=0, spatial_grid_3=0)
 
-
+sys.exit()
 
 #------------------------------------------------------------
 # Derivation for Jurisdictional Unit
@@ -688,11 +794,6 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
 #         print(row[1])
 #         print(row[2])
 #         print(row[3])
-
-
-#------------------------------------------------------------
-
-# Tribe Name derivation 
 
 
 #------------------------------------------------------------
@@ -903,8 +1004,18 @@ def vdep(layer):
 
     arcpy.sa.ExtractValuesToPoints(Indexed_Points, layer, "vegDp_extract", interpolate_values="NONE", add_attributes="VALUE_ONLY")
 
+    print (f"Calculating Vegetation Departure for Landfire: {layer}")
+    # describe("vegDp_extract")
 
-    describe("vegDp_extract")
+
+    # Only calculate veg dep if there are points in the layer
+    # Use GetCount_management to count the features
+    # result = arcpy.GetCount_management("vegDp_extract")
+
+    # # Get the count as an integer
+    # count = int(result.getOutput(0))
+
+
 
     # Initialize an empty dictionary
     vegDep_dict = {}
@@ -933,19 +1044,141 @@ def vdep(layer):
                 row[1] = vegDep_dict[guid][0]
            
             # Update the feature with the new values
-            cursor.updateRow(row)
+            
+            if row[1] is not None:
+                cursor.updateRow(row)
 
     with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
         for row in cursor:
-            print(row[1])
+
+            print(f"veg dep {row[1]}")
 
 
 # run vegetation departure derivation on US Veg Departure and HI Veg Departure
-
 veg_departure_layers = [us_vegDep, hi_vegDep]
 
 for layer in veg_departure_layers:
     vdep(layer)
+
+
+
+#------------------------------------------------------------------------------------------------
+
+# Tribe Name and BIA Agency Derivation
+
+
+# describe(tribal_leaders)
+
+tribe_name
+tribal_leaders
+
+# tribal leaders dictionary 
+tribal_leaders_dict = {}
+
+fields = ["tribefullname", "biaagency"]
+
+
+# Use a search cursor to iterate through the data and populate the dictionary
+with arcpy.da.SearchCursor(tribal_leaders, fields) as cursor:
+    for row in cursor:
+        tname = row[0] 
+        agency = row[1]
+        
+        val_list = [agency]
+        
+        tribal_leaders_dict[tname] = val_list
+
+
+# for v in tribal_leaders_dict:
+    
+#     # split_values = [value.split(",") for value in ju_dict[v]]
+#     print (f"{v}: tribal_leaders_dict[v]")
+
+
+
+# if repeating for BIA with new data, run this code on first import
+# Process: Add Field (Add Field) (management)
+# arcpy.management.AddField(tribe_name, field_name="tribe_name_edit", field_type="TEXT", field_precision=None, field_scale=None, field_length=None, field_alias="", field_is_nullable="NULLABLE", field_is_required="NON_REQUIRED", field_domain="")[0]
+
+# # Process: Calculate Field (Calculate Field) (management)
+# arcpy.management.CalculateField(tribe_name, field="tribe_name_edit", expression="!NAME!", expression_type="PYTHON3", code_block="", field_type="TEXT", enforce_domains="NO_ENFORCE_DOMAINS")
+
+arcpy.analysis.SpatialJoin(Indexed_Points, tribe_name, "tribes_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="guid \"guid\" true true false 255 Text 0 0,First,#,InFormFuelsFeatureCsvExtract_Points,GUID,0,8000;tribe_name \"tribe_name\" true true false 255 Text 0 0,First,#,TribeName,tribe_name_edit,0,255", match_option="INTERSECT", search_radius="", distance_field_name="")
+
+
+# Initialize an empty dictionary
+tr_name_dict = {}
+
+fields = ["GUID", "tribe_name"]
+
+# Use a search cursor to iterate through the data and populate the dictionary
+with arcpy.da.SearchCursor("tribes_sj", fields) as cursor:
+    for row in cursor:
+        guid = row[0] 
+        tr = row[1]
+
+        val_list = [tr]
+        
+        tr_name_dict[guid] = val_list
+
+
+
+        
+fields = ["GUID", "TribeName", "OwnershipUnit"]
+with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
+    for row in cursor:
+        guid = row[0] 
+        tr_sj = tr_name_dict[guid][0]
+        
+        # get tribe name from sj 
+        # print(f"guid: {tr_name_dict[guid][0]}")
+
+        
+
+        # row[1] = tr_name_dict[guid]
+
+        # check if tribe name in tribal leaders dict
+        for key, value in tribal_leaders_dict.items():
+            # print(f"key: {key}, value: {value}")
+            if tr_sj is not None and tr_sj.rstrip().lower() in key.rstrip().lower():
+                print (f"Match found: {key}: {value}")
+                row[2] = key
+                break
+
+
+        # Update the feature with the new values
+        row[1] = tr_sj
+        print (f"row[1] - tribename: {row[1]}")
+        print (f"row[2] - ownershipunit: {row[2]}")
+
+
+        cursor.updateRow(row)
+
+
+sys.exit()
+
+
+for v in tr_name_dict:
+    
+    
+    print (f"{v}: {tr_name_dict[v]}")
+
+
+# InFORM Fuels fields
+fields = ["GUID", "TribeName"]
+with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
+    for row in cursor:
+        guid = row[0]
+        if guid in tr_name_dict:
+            row[1] = tr_name_dict[guid][0]
+           
+        # Update the feature with the new values
+        cursor.updateRow(row)
+
+with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
+      for row in cursor:
+          print(f"Tribal land/tribe {row[1]}")
+
 
 
 
