@@ -13,7 +13,9 @@ import arcpy
 from collections import Counter
 
 # Replace these file paths with your actual file paths
-nfpors_table = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\Edited BIA_3year_data_for_Import_9_14_23 TESTING.xlsx'
+# nfpors_table = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\Edited BIA_3year_data_for_Import_9_14_23 TESTING.xlsx'
+nfpors_table = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\10042023 BIA Import\10042023 bia import.xlsx'
+
 inform_table = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\InFormFuelsFeatureCsvExtract BIA.csv'
 
 # Input file gdb for geoprocessing 
@@ -40,7 +42,7 @@ arcpy.env.overwriteOutput = True
 WFDSS_Jurisdictional_Agency = r'C:\Users\warmstrong\Documents\Data\Jurisdictional\07272023 Jurisdictional_Unit_(Public).gdb\470746db-06af-4720-b20a-e530856939c7.gdb\WFDSS_Jurisdictional_Agency'
 
 # Tribe Name
-tribe_name = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\data.gdb\TribeName'
+tribe_name = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\data.gdb\TribeName_allFields'
 
 # Tribal Leaders
 tribal_leaders = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\data.gdb\Tribal_Leaders_table'
@@ -58,7 +60,10 @@ bia_regions = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM
 con_districts = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\USA_118th_Congressional_Districts.gdb\56f52086-3918-488c-b058-92bc23d4d20a.gdb\USA_118th_Congressional_Districts'
 
 # US Veg Departure
-us_vegDep = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\BIA Crosswalk\US_220VDEP'
+# us_vegDep = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\BIA Crosswalk\US_220VDEP'
+
+# downsampled to 300m 8bit unsigned integer. 
+us_vegDep = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\BIA Crosswalk\US_220VDEP_300m.tif'
 
 # Hawai Veg Departure
 hi_vegDep = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\data.gdb\HI_220VDEP'
@@ -80,10 +85,6 @@ def describe(layer):
     print(f"\n\nField Names for {layer}:")
     for field_name in field_names:
         print(field_name)
-
-
-
-
 
 #------------------------------------------------------------
 # CSV file encoding detection
@@ -153,20 +154,19 @@ columns_to_include = [
     "BilLaborersFunds",
     "GranteeCost",
     "ProjectNotes",
-    "BILEstimatedPersonnelCost",
-    "BILEstimatedAssetCost",
-    "BILEstimatedContractualCost",
-    "BILEstimatedGrantsFixedCosts",
-    "BILEstimatedOtherCost",
-    "EstimatedSuccessProbability",
-    "ImplementationFeasibility",
-    "EstimatedDurability",
-    "TreatmentPriority",
+    "BIL Estimated Personnel Cost",
+    "BIL Estimated Asset Cost",
+    "BIL Estimated Contractual Cost",
+    "BIL Estimated Grants Fixed Costs",
+    "BIL Estimated Other Cost",
+    "Estimated Success Probability",
+    "Implementation Feasibility",
+    "Estimated Durability",
+     # "EstimatedDurability"
+    "Treatment Priority", 
+    # "TreatmentPriority",
     "IsBil"
-   
 ]
-
-
 
 # Specify the data type for lat / long. Convert to string. 
 dtype_specification = {
@@ -178,19 +178,13 @@ dtype_specification = {
     "BureauApprovalDate": 'str'
 }
 
-
 # Read the input Excel file into a Pandas DataFrame with specified columns
 #df = pd.read_excel(nfpors_table, usecols=columns_to_include, dtype=dtype_specification)
 df = pd.read_excel(nfpors_table, usecols=columns_to_include)
 
-# allColumns(df)
-# sys.exit()
-
-
 # Check if the DataFrame was successfully loaded
 if df is None:
     print("Error: Unable to read the CSV file with any encoding.")
-
 
 # Mapping from NFPORS table to InFORM Fuels table
 column_mapping = {
@@ -223,34 +217,19 @@ column_mapping = {
     "RegionalApprovalDate": "RegionalApprovalDate",
     "BureauApprovalDate": "AgencyApprovalDate",
     "TreatmentDriver": "TreatmentDriver",
-    "EstimatedDurability":"Durability",
-    "EstimatedSuccessProbability":"Priority",
+    "Estimated Durability":"Durability",
+    "Estimated Success Probability":"Priority",
     "ActivityTreatmentNotes":"Notes"
 
 }
 
-
-
-
-# column_mapping = {
-#     "ActivityTreatmentName": "Name",
-#     "BureauName": "FundingAgency",
-#     "TreatmentLatitude": "Latitude",
-#     "TreatmentLongitude": "Longitude",
-    
-# }
-
 # Rename the columns in the DataFrame using the mapping
 df.rename(columns=column_mapping, inplace=True)
-
-# allColumns(df)
-# sys.exit()
 
 # Handling input NFPORS fields that go to more than one InFORM Fuels field
 # copy the 1st reasigned column to a new column
 df["EstimatedTotalCost"] = df["FundingSource"]  # PlannedDirectCost -> FundingSource -> EstimatedTotalCost
 df["EstimatedActivityID"] = df["EstimatedTreatmentID"] # ActivityTreatmentID -> EstimatedTreatmentID -> EstimatedActivityID
-
 
 # All InFORM Fuels columns
 
@@ -331,10 +310,7 @@ inForm_fields_all = [
 "IsVegetationManual",
 "TreatmentDriver",
 "FundingUnitType"
-
-
 ]
-
 
 # list of all InFORM Fuels columns, and NFPORS columns for ordering and testing 
 inForm_nfpors_all = [
@@ -425,18 +401,30 @@ inForm_nfpors_all = [
 "IsBil",
 "GranteeCost",
 "ProjectNotes",
-"BILEstimatedPersonnelCost",
-"BILEstimatedGrantsFixedCosts",
-"BILEstimatedAssetCost",
-"BILEstimatedContractualCost",
-"BILEstimatedOtherCost",
+"BIL Estimated Personnel Cost",
+"BIL Estimated Grants Fixed Costs",
+"BIL Estimated Asset Cost",
+"BIL Estimated Contractual Cost",
+"BIL Estimated Other Cost",
 # "EstimatedSuccessProbability", # this was added and renamed in the mapping 
-"ImplementationFeasibility",
+"Implementation Feasibility",
 "Durability",  
-"TreatmentPriority"
-
-
+"Treatment Priority"
 ]
+
+
+#  "BIL Estimated Personnel Cost",
+#     "BIL Estimated Asset Cost",
+#     "BIL Estimated Contractual Cost",
+#     "BIL Estimated Grants Fixed Costs",
+#     "BIL Estimated Other Cost",
+#     "Estimated Success Probability",
+#     "Implementation Feasibility",
+#     "Estimated Durability",
+#      # "EstimatedDurability"
+#     "Treatment Priority", 
+#     # "TreatmentPriority",
+#     "IsBil"
 
 # Fields to delete before saving to InFORM Fuels. 
 del_fields = [
@@ -461,8 +449,6 @@ del_fields = [
 "TreatmentPriority"
 ]
 
-
-
 # Iterate over the list of columns to check if they exist in the DataFrame
 for column_name in inForm_nfpors_all:
     
@@ -477,10 +463,6 @@ df = df[inForm_nfpors_all]
 # Add a GUID for geospatial joins
 # Add a new column 'GUID' with generated GUIDs
 df['GUID'] = [str(uuid.uuid4()) for _ in range(len(df))]
-
-
-# allColumns(df)
-# sys.exit()
 
 # Write the modified DataFrame to the output CSV
 temp_csv = df.to_csv(inform_table, index=False)
@@ -501,10 +483,8 @@ gis_derivation_table_fullPath = f'{gdb_path}\\{gis_derivation_table}'
 
 # describe(gis_derivation_table_fullPath)
 
-
-
+# sys.exit()
 #------------------------------------------------------------
-
 # columns that have a one-to-many relationship or need a transformation 
 
 update_fields = [
@@ -520,11 +500,11 @@ update_fields = [
     "BILPrescribedFireFunds", # [9]
     "BILControlLocationsFunds", # [10]
     "BilLaborersFunds", # [11]
-    "BILEstimatedPersonnelCost", # [12]
-    "BILEstimatedAssetCost", # [13]
-    "BILEstimatedContractualCost", # [14]
-    "BILEstimatedGrantsFixedCosts", # [15]
-    "BILEstimatedOtherCost", # [16]
+    "BIL_Estimated_Personnel_Cost", # [12]
+    "BIL_Estimated_Asset_Cost", # [13]
+    "BIL_Estimated_Contractual_Cost", # [14]
+    "BIL_Estimated_Grants_Fixed_Costs", # [15]
+    "BIL_Estimated_Other_Cost", # [16]
     "IsPoint", # [17]
     "FundingSource", # [18]
     "BILFunding", # [19]
@@ -537,13 +517,26 @@ update_fields = [
     "EstimatedContractualCost", # [26]
     "EstimatedGrantsFixedCost",# [27]
     "EstimatedOtherCost", # [28]
+    "EstimatedTreatmentID", # [29]
+    "EstimatedActivityID" # [30]
 ]
 
 
 
-# for f in update_fields:
-#     if f not in field_names:
-#         print ("\n\n"+f + " not in fields")
+#  "BIL Estimated Personnel Cost",
+#     "BIL Estimated Asset Cost",
+#     "BIL Estimated Contractual Cost",
+#     "BIL Estimated Grants Fixed Costs",
+#     "BIL Estimated Other Cost",
+#     "Estimated Success Probability",
+#     "Implementation Feasibility",
+#     "Estimated Durability",
+#      # "EstimatedDurability"
+#     "Treatment Priority", 
+#     # "TreatmentPriority",
+#     "IsBil"
+
+
 
 # Open an update cursor to loop through the feature class
 with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, update_fields) as cursor:
@@ -573,19 +566,24 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, update_fields) as curs
         ProjectNotes = row[21]
         EstimatedTotalCost = row[22]
         category = row[23]
+        EstimatedTreatmentID = row[29]
+        EstimatedActivityID = row[30]
         
-        
-        
+        # Treatment or Activity, set ActivityTreatmentID to proper field. Set to Treatment by default
+        if Class.rstrip().lower() == "activity":
+            row[30] = EstimatedTreatmentID
+            row[29] = None
+        else:
+            row[29] = EstimatedActivityID
+            row[30] = None
+
+
+
         # latitude / longitude calculation
         # If "Class" == Activity,  Latitude = ProjectLatitude, Longitude = ProjectLongitude. Else, as is. 
         if Class.rstrip().lower() == "activity":
-
-            # print (f"Activity found. Original lat/long {Latitude}, {Longitude}")
-
-            row[1]  = ProjectLatitude
+            row[1] = ProjectLatitude
             row[2] = ProjectLongitude
-
-            # print (f"Activity found: Updated lat/long {row[1]}, {row[2]}")
 
         # Calculated Acres / is Point
         #If Class is Activity (Column W) default to 10 acres, unless...they crosswalk in as "program management, 
@@ -604,18 +602,20 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, update_fields) as curs
 
         
         # print(f"class {Class.lower()}, category {category.lower()}")
-        elif Class.rstrip().lower() == "activity" and category.lower().rstrip() == "program management":
+        if Class.rstrip().lower() == "activity" and category.lower().rstrip() == "program management":
             print(f"found program management")
+            print(f"class {Class}, category {category}")
             row[6] = 1
             row[17] = 1
-           
         
+
+        # print(f"acres {CalculatedAcres}, is point {IsPoint}")
         # Funding Source
 
         # If "PlannedDirectCost" (converted to "FundingSource") >= 1, look through "BILGeneralFunds","BILThinningFunds",	
         # "BILPrescribedFireFunds","BILControlLocationsFunds","BILLaborersFunds", for funding source. Else leave as is.
 
-        if FundingSource >= 1:
+        if FundingSource is not None and FundingSource >= 1:
             bil_total = 0
             if BILGeneralFunds is not None and BILGeneralFunds >0:
                 bil_total += BILGeneralFunds
@@ -642,7 +642,6 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, update_fields) as curs
             row[27] = BILEstimatedGrantsFixedCost  
             row[28] = BILEstimatedOtherCost
             
-
         # Project Notes
         # Should not overwrite the ActivityTreament Notes, 
         # but should be brough over if ActivityTreatmentNotes are blank
@@ -651,9 +650,6 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, update_fields) as curs
 
         # Update the feature with the new values
         cursor.updateRow(row)
-
-
-# sys.exit()
 
 # ------------------------------------------------------------
 # NFPORS to InFORM Fuels domain crosswalk
@@ -706,29 +702,19 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, crosswalk_fields) as c
         # Extract values from the current row
         typename = row[0]
         category = row[1] 
-       
         # print (f"nfpors typename {typename}, category {category}")
 
         # Check if the NFPORS typename exists in the table data dictionary
         for t in table_data:
-            
-            # print(f"crosswalk typename {t}, category {table_data[t][0]}, type {table_data[t][1]}")
 
             if typename.upper() == t.upper():
-
                 print (f"Match found {t}")
                 # Update Category and Type based on the dictionary values
                 row[0] = table_data[t][1]  # Update Type
                 row[1] = table_data[t][0]  # Update Category
-
                 print (f"InFORM Fuels type {row[0]}, category {row[1]}")
-
-       
             
         cursor.updateRow(row)
-
-
-
 #------------------------------------------------------------
 # Create points feature class from table
 
@@ -739,16 +725,11 @@ arcpy.management.XYTableToPoint(gis_derivation_table_fullPath, Points_Feature_Cl
 # Add Spatial Index 
 Indexed_Points = arcpy.management.AddSpatialIndex(in_features=Points_Feature_Class, spatial_grid_1=0, spatial_grid_2=0, spatial_grid_3=0)
 
-sys.exit()
-
 #------------------------------------------------------------
 # Derivation for Jurisdictional Unit
 
 # Spatial Join Jurisdictional Agency to Points
-
 arcpy.analysis.SpatialJoin(Indexed_Points, WFDSS_Jurisdictional_Agency, "JU_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="GUID \"GUID\" true true false 8000 Text 0 0,First,#,points,GUID,0,8000;JurisdictionalUnitName \"JurisdictionalUnitName\" true true false 100 Text 0 0,First,#,WFDSS_Jurisdictional_Agency,JurisdictionalUnitName,0,100;LegendLandownerCategory \"LegendLandownerCategory\" true true false 20 Text 0 0,First,#,WFDSS_Jurisdictional_Agency,LegendLandownerCategory,0,20;LandownerDepartment \"LandownerDepartment\" true true false 80 Text 0 0,First,#,WFDSS_Jurisdictional_Agency,LandownerDepartment,0,80", match_option="INTERSECT", search_radius="", distance_field_name="")
-
-# describe("JU_sj")
 
 # Initialize an empty dictionary
 ju_dict = {}
@@ -763,18 +744,8 @@ with arcpy.da.SearchCursor("JU_sj", fields) as cursor:
         land_dept = row[1]
         jur_name = row[2]
         legend_cat = row[3] 
-        
         val_list = [land_dept, jur_name, legend_cat]
-        
         ju_dict[guid] = val_list
-
-#for v in ju_dict:
-    
-    # split_values = [value.split(",") for value in ju_dict[v]]
-    #print (ju_dict[v])
-
-    # Print the resulting list
-    #print(split_values)
 
 # InFORM Fuels fields
 fields = ["GUID", "OwnershipDepartment", "OwnershipUnit", "OwnershipAgency"]
@@ -788,19 +759,8 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
         # Update the feature with the new values
         cursor.updateRow(row)
 
-
-# with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
-#     for row in cursor:
-#         print(row[1])
-#         print(row[2])
-#         print(row[3])
-
-
 #------------------------------------------------------------
-
 # State Derivation
-
-
 # Spatial Join states to points
   
 arcpy.analysis.SpatialJoin(Indexed_Points, states, "states_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="GUID \"GUID\" true true false 8000 Text 0 0,First,#,C:\\Users\\warmstrong\\Documents\\work\\InFORM\\20230912 NFPORS InFORM Crosswalk Script\\data input\\data.gdb\\InFormFuelsFeatureCsvExtract_Points,GUID,0,8000;STATE_NAME \"STATE_NAME\" true true false 25 Text 0 0,First,#,States,STATE_NAME,0,25", match_option="INTERSECT", search_radius="", distance_field_name="")
@@ -816,26 +776,8 @@ with arcpy.da.SearchCursor("states_sj", fields) as cursor:
     for row in cursor:
         guid = row[0] 
         state = row[1]
-
-   #     print (guid, state)
-       
         val_list = [state]
-        
         state_dict[guid] = val_list
-
-
-
-
-
-# for v in state_dict:
-    
-    # split_values = [value.split(",") for value in ju_dict[v]]
-    # print (state_dict[v])
-
-    # Print the resulting list
-    #print(split_values)
-
-
 
 # InFORM Fuels fields
 fields = ["GUID", "State"]
@@ -848,30 +790,12 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
         # Update the feature with the new values
         cursor.updateRow(row)
 
-# with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
-#     for row in cursor:
-#         print(row[1])
-
-
 #------------------------------------------------------------
-# 
 # County Derivation 
+
 arcpy.analysis.SpatialJoin(Indexed_Points, county, "county_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="GUID \"GUID\" true true false 255 Text 0 0,First,#,C:\\Users\\warmstrong\\Documents\\work\\InFORM\\20230912 NFPORS InFORM Crosswalk Script\\data input\\data.gdb\\InFormFuelsFeatureCsvExtract_Points,GUID,0,8000;CountyName \"CountyName\" true true false 255 Text 0 0,First,#,CountyName,CountyName,0,255", match_option="INTERSECT", search_radius="", distance_field_name="")
 
-
 # describe("county_sj")
-# sys.exit()
-
-
-# fields = ["CountyName"]
-# with arcpy.da.SearchCursor("county_sj", fields) as cursor:
-#      for row in cursor:
-#          print(row[0])
-
-
-
-# sys.exit()
-
 
 # Initialize an empty dictionary
 county_dict = {}
@@ -884,11 +808,8 @@ with arcpy.da.SearchCursor("county_sj", fields) as cursor:
     for row in cursor:
         guid = row[0] 
         county = row[1]
-       
         val_list = [county]
-        
         county_dict[guid] = val_list
-
 
 # InFORM Fuels fields
 fields = ["GUID", "County"]
@@ -901,16 +822,7 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
         # Update the feature with the new values
         cursor.updateRow(row)
 
-
-# with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
-#      for row in cursor:
-#          print(row[1])
-
-
-
-
 #------------------------------------------------------------
-
 # Region Derivation - For BIA, it's BIA Region
 
 # Spatial Join regions to points
@@ -929,11 +841,8 @@ with arcpy.da.SearchCursor("regions_sj", fields) as cursor:
     for row in cursor:
         guid = row[0] 
         region = row[1]
-       
         val_list = [region]
-        
         region_dict[guid] = val_list
-
 
 # InFORM Fuels fields
 fields = ["GUID", "OwnershipRegion"]
@@ -946,18 +855,10 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
         # Update the feature with the new values
         cursor.updateRow(row)
 
-# with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
-#      for row in cursor:
-#         print(row[1])
-
-
 #----------------------------------------------------------------------------
-
 # Congressional District Derivation
 
 arcpy.analysis.SpatialJoin(Indexed_Points, con_districts, "cd_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="GUID \"GUID\" true true false 8000 Text 0 0,First,#,C:\\Users\\warmstrong\\Documents\\work\\InFORM\\20230912 NFPORS InFORM Crosswalk Script\\data input\\data.gdb\\InFormFuelsFeatureCsvExtract_Points,GUID,0,8000;DISTRICTID \"District ID\" true true false 4 Text 0 0,First,#,USA_118th_Congressional_Districts,DISTRICTID,0,4;STATE_ABBR \"State Abbreviation\" true true false 2 Text 0 0,First,#,USA_118th_Congressional_Districts,STATE_ABBR,0,2", match_option="INTERSECT", search_radius="", distance_field_name="") 
-
-# describe("cd_sj")
 
 # Initialize an empty dictionary
 cd_dict = {}
@@ -971,9 +872,7 @@ with arcpy.da.SearchCursor("cd_sj", fields) as cursor:
         guid = row[0] 
         district = row[1]
         state_abv = row[2]
-       
         val_list = [f"{state_abv}-{district}"]
-        
         cd_dict[guid] = val_list
 
 
@@ -987,11 +886,6 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
            
         # Update the feature with the new values
         cursor.updateRow(row)
-
-# with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
-#      for row in cursor:
-#          print(row[1])
-
 
 #---------------------------------------------------------------------------------- 
 
@@ -1028,11 +922,8 @@ def vdep(layer):
         for row in cursor:
             guid = row[0] 
             vd = row[1]
-        
             val_list = [vd]
-        
             vegDep_dict[guid] = val_list
-
 
     # InFORM Fuels fields
     fields = ["GUID", "VegDeparturePercentageDerived"]
@@ -1050,50 +941,36 @@ def vdep(layer):
 
     with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
         for row in cursor:
-
             print(f"veg dep {row[1]}")
 
 
 # run vegetation departure derivation on US Veg Departure and HI Veg Departure
-veg_departure_layers = [us_vegDep, hi_vegDep]
+veg_departure_layers = [us_vegDep]
+
+# veg_departure_layers = [us_vegDep, hi_vegDep]
 
 for layer in veg_departure_layers:
     vdep(layer)
 
-
-
 #------------------------------------------------------------------------------------------------
-
 # Tribe Name and BIA Agency Derivation
-
-
 # describe(tribal_leaders)
-
-tribe_name
-tribal_leaders
 
 # tribal leaders dictionary 
 tribal_leaders_dict = {}
 
-fields = ["tribefullname", "biaagency"]
-
+fields = ["TribeFullName", "BIAAgency"]
 
 # Use a search cursor to iterate through the data and populate the dictionary
 with arcpy.da.SearchCursor(tribal_leaders, fields) as cursor:
     for row in cursor:
         tname = row[0] 
         agency = row[1]
-        
         val_list = [agency]
-        
         tribal_leaders_dict[tname] = val_list
 
-
 # for v in tribal_leaders_dict:
-    
-#     # split_values = [value.split(",") for value in ju_dict[v]]
-#     print (f"{v}: tribal_leaders_dict[v]")
-
+#     print (f"{v}: {tribal_leaders_dict[v]}")
 
 
 # if repeating for BIA with new data, run this code on first import
@@ -1103,100 +980,86 @@ with arcpy.da.SearchCursor(tribal_leaders, fields) as cursor:
 # # Process: Calculate Field (Calculate Field) (management)
 # arcpy.management.CalculateField(tribe_name, field="tribe_name_edit", expression="!NAME!", expression_type="PYTHON3", code_block="", field_type="TEXT", enforce_domains="NO_ENFORCE_DOMAINS")
 
-arcpy.analysis.SpatialJoin(Indexed_Points, tribe_name, "tribes_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="guid \"guid\" true true false 255 Text 0 0,First,#,InFormFuelsFeatureCsvExtract_Points,GUID,0,8000;tribe_name \"tribe_name\" true true false 255 Text 0 0,First,#,TribeName,tribe_name_edit,0,255", match_option="INTERSECT", search_radius="", distance_field_name="")
+# arcpy.analysis.SpatialJoin(Indexed_Points, tribe_name, "tribes_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="guid \"guid\" true true false 255 Text 0 0,First,#,InFormFuelsFeatureCsvExtract_Points,GUID,0,8000;tribe_name \"tribe_name\" true true false 255 Text 0 0,First,#,TribeName,tribe_name_edit,0,255", match_option="INTERSECT", search_radius="", distance_field_name="")
+arcpy.analysis.SpatialJoin(Indexed_Points, tribe_name, "tribes_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="", match_option="INTERSECT", search_radius="", distance_field_name="")
 
+# describe("tribes_sj")
+
+# with arcpy.da.SearchCursor("tribes_sj", ["NAME_1"]) as cursor:
+#         for row in cursor:
+#             print(f"tribe name: {row[0]}")
+
+
+# sys.exit()
 
 # Initialize an empty dictionary
 tr_name_dict = {}
 
-fields = ["GUID", "tribe_name"]
+fields = ["GUID", "TRIBE_NAME","NAME_1"]
 
 # Use a search cursor to iterate through the data and populate the dictionary
 with arcpy.da.SearchCursor("tribes_sj", fields) as cursor:
     for row in cursor:
         guid = row[0] 
-        tr = row[1]
-
-        val_list = [tr]
-        
+        tribe_full_name = row[1]
+        tribe_short_name = row[2]
+        val_list = [tribe_full_name, tribe_short_name]
         tr_name_dict[guid] = val_list
 
 
-
+# for v in tr_name_dict:
+#     print (f"{v}: {tr_name_dict[v]}")
+# sys.exit()
         
 fields = ["GUID", "TribeName", "OwnershipUnit"]
+
 with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
     for row in cursor:
         guid = row[0] 
-        tr_sj = tr_name_dict[guid][0]
-        
-        # get tribe name from sj 
-        # print(f"guid: {tr_name_dict[guid][0]}")
-
-        
-
-        # row[1] = tr_name_dict[guid]
-
+        tribe_name_full = tr_name_dict[guid][0]
+        tribe_name_short = tr_name_dict[guid][1]
+   
         # check if tribe name in tribal leaders dict
         for key, value in tribal_leaders_dict.items():
             # print(f"key: {key}, value: {value}")
-            if tr_sj is not None and tr_sj.rstrip().lower() in key.rstrip().lower():
+            if tribe_name_full is not None and tribe_name_full.rstrip().lower() in key.rstrip().lower():
                 print (f"Match found: {key}: {value}")
-                row[2] = key
+                row[2] = value[0]
                 break
-
+            elif tribe_name_short is not None and tribe_name_short.rstrip().lower() in key.rstrip().lower():
+                print (f"Match found: {key}: {value}")
+                row[2] = value[0]
+                break   
 
         # Update the feature with the new values
-        row[1] = tr_sj
-        print (f"row[1] - tribename: {row[1]}")
-        print (f"row[2] - ownershipunit: {row[2]}")
-
-
+        # row[1] = tr_sj
+        # print (f"row[1] - tribename: {row[1]}")
+        # print (f"row[2] - ownershipunit: {row[2]}")
         cursor.updateRow(row)
 
-
-sys.exit()
-
-
 for v in tr_name_dict:
-    
-    
     print (f"{v}: {tr_name_dict[v]}")
 
-
 # InFORM Fuels fields
-fields = ["GUID", "TribeName"]
+fields = ["GUID", "TribeName", "OwnershipUnit", "FundingUnit"]
 with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
     for row in cursor:
+        ownership = row[2]
         guid = row[0]
         if guid in tr_name_dict:
             row[1] = tr_name_dict[guid][0]
-           
+        row[3] = ownership
         # Update the feature with the new values
         cursor.updateRow(row)
 
-with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
-      for row in cursor:
-          print(f"Tribal land/tribe {row[1]}")
-
-
+# with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
+#       for row in cursor:
+#           print(f"Tribal land/tribe {row[1]}")
 
 
 sys.exit()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+#----------------------------------------------------------------------------------
 
 # Write the modified DataFrame to the output CSV
 df.to_csv(inform_table, index=False)
