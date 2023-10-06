@@ -14,7 +14,7 @@ from collections import Counter
 
 # Replace these file paths with your actual file paths
 # nfpors_table = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\Edited BIA_3year_data_for_Import_9_14_23 TESTING.xlsx'
-nfpors_table = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\10042023 BIA Import\10042023 bia import.xlsx'
+nfpors_table = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\10042023 BIA Import\10062023 edit.xlsx'
 
 inform_table = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\InFormFuelsFeatureCsvExtract BIA.csv'
 
@@ -62,8 +62,11 @@ con_districts = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFO
 # US Veg Departure
 # us_vegDep = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\BIA Crosswalk\US_220VDEP'
 
-# downsampled to 300m 8bit unsigned integer. 
-us_vegDep = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\BIA Crosswalk\US_220VDEP_300m.tif'
+# US Veg Departure downsampled to 150m 8bit unsigned integer. 
+us_vegDep = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\BIA Crosswalk\US_220VDEP_150m.tif'
+
+# US Veg Departure downsampled to 300m 8bit unsigned integer. 
+# us_vegDep = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\BIA Crosswalk\US_220VDEP_300m.tif'
 
 # Hawai Veg Departure
 hi_vegDep = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\data.gdb\HI_220VDEP'
@@ -85,6 +88,7 @@ def describe(layer):
     print(f"\n\nField Names for {layer}:")
     for field_name in field_names:
         print(field_name)
+    return field_names
 
 #------------------------------------------------------------
 # CSV file encoding detection
@@ -110,8 +114,17 @@ def allColumns(df):
     for column_name in df.columns:
         print(column_name)
 
+def read_spreadsheet_cols(file_path):
+    df = pd.read_excel(file_path)
+    for column_name in df.columns:
+        print(column_name)
+
 #------------------------------------------------------------
 # Columns to include in the dataframe. Make sure it matches the NFPORS table inputs/field mapping dictionary 
+
+
+# read_spreadsheet_cols(nfpors_table)
+# sys.exit()
 
 columns_to_include = [
     "ActivityTreatmentName",
@@ -147,10 +160,10 @@ columns_to_include = [
     "BILFunding",
     "TreatmentDriver",
     "AcresMonitored",
-    "BILGeneralFunds",
+    "BiLGeneralFunds",
     "BilThinningFunds",
-    "BILPrescribedFireFunds",
-    "BILControlLocationsFunds",
+    "BiLPrescribedFireFunds",
+    "BiLControlLocationsFunds",
     "BilLaborersFunds",
     "GranteeCost",
     "ProjectNotes",
@@ -162,10 +175,10 @@ columns_to_include = [
     "Estimated Success Probability",
     "Implementation Feasibility",
     "Estimated Durability",
-     # "EstimatedDurability"
     "Treatment Priority", 
-    # "TreatmentPriority",
-    "IsBil"
+    "IsBil",
+    "IsRtrl",
+    "ProjectIsRtrl"
 ]
 
 # Specify the data type for lat / long. Convert to string. 
@@ -231,172 +244,204 @@ df.rename(columns=column_mapping, inplace=True)
 df["EstimatedTotalCost"] = df["FundingSource"]  # PlannedDirectCost -> FundingSource -> EstimatedTotalCost
 df["EstimatedActivityID"] = df["EstimatedTreatmentID"] # ActivityTreatmentID -> EstimatedTreatmentID -> EstimatedActivityID
 
+
 # All InFORM Fuels columns
 
 inForm_fields_all = [
 "OBJECTID",
-"Name",
-"EstimatedTreatmentID",
-"EstimatedActivityID",
-"ActualTreatmentID",
-"ActualActivityID",
-"IsPoint",
-"ParentID",
-"ParentObjectID",
-"IsParentTreatment",
-"LocalID",
-"Type",
-"Category",
-"Class",
-"OwnershipUnit",
-"OwnershipRegion",
-"OwnershipAgency",
-"OwnershipDepartment",
-"CongressionalDistrictNumber",
-"TribeName",
-"County",
-"State",
+"CreatedBy",
+"Unit",
+"Region",
+"Bureau",
+"Department",
 "Latitude",
 "Longitude",
 "CalculatedAcres",
-"Durability",
-"Priority",
-"Feasibility",
 "IsWUI",
-"IsFunded",
-"IsApproved",
-"EstimatedSuccessProbability",
 "InitiationDate",
-"InitiationFiscalYear",
-"InitiationFiscalQuarter",
 "CompletionDate",
-"CompletionFiscalYear",
-"CompletionFiscalQuarter",
-"CostCenter",
-"FunctionalArea",
-"WBS",
-"CostCode",
-"FundingSource",
-"FundingDepartment",
-"FundingAgency",
-"FundingRegion",
-"FundingUnit",
-"FundingSubUnit",
-"FundingTribe",
-"FundingUnitID",
-"EstimatedPersonnelCost",
-"EstimatedAssetCost",
-"EstimatedContractualCost",
-"EstimatedGrantsFixedCost",
-"EstimatedOtherCost",
-"EstimatedTotalCost",
 "Notes",
-"LocalApprovalDate",
-"RegionalApprovalDate",
-"AgencyApprovalDate",
-"DepartmentApprovalDate",
-"FundedDate",
-"Status",
-"StatusReason",
-"IsArchived",
-"LastModifiedDate",
 "LastModifiedBy",
 "CreatedOnDate",
-"CreatedBy",
+"LastModifiedDate",
+"Status",
+"StatusReason",
+"ActualTreatmentID",
+"ActualActivityID",
+"EstimatedTreatmentID",
+"EstimatedActivityID",
+"InitiationFiscalYear",
+"InitiationFiscalQuarter",
+"CompletionFiscalYear",
+"CompletionFiscalQuarter",
+"Class",
+"Category",
+"Type",
+"Durability",
+"Priority",
+"FundingSource",
+"CongressionalDistrictNumber",
+"County",
+"State",
+"EstimatedPersonnelCost",
+"EstimatedAssetCost",
+"EstimatedGrantsFixedCost",
+"EstimatedContractualCost",
+"EstimatedOtherCost",
+"EstimatedTotalCost",
+"LocalApprovalDate",
+"RegionalApprovalDate",
+"BureauApprovalDate",
+"DepartmentApprovalDate",
+"FundedDate",
+"EstimatedSuccessProbability",
+"Feasibility",
+"IsApproved",
+"IsFunded",
+"TribeName",
+"IsArchived",
+"Name",
+"IsPoint",
+"Agency",
+"AgencyApprovalDate",
+"TotalAcres",
+"IsDepartmentManual",
+"WBSID",
+"FundingUnit",
+"FundingRegion",
+"FundingAgency",
+"FundingDepartment",
+"FundingTribe",
+"CostCenter",
+"FunctionalArea",
+"CostCode",
 "CancelledDate",
-"BILFunding",
-"VegDeparturePercentageManual",
+"HasGroup",
+"GroupCount",
+"UnitID",
 "VegDeparturePercentageDerived",
+"VegDeparturePercentageManual",
 "IsVegetationManual",
+"IsRTRL",
+"FundingSubUnit",
+"FundingUnitType",
+"IsBIL",
+"BILFunding",
 "TreatmentDriver",
-"FundingUnitType"
+"ContributedFundingSource",
+"ContributedNotes",
+"ContributedPersonnelCost",
+"ContributedAssetCost",
+"ContributedGrantsFixedCost",
+"ContributedContractualCost",
+"ContributedOtherCost",
+"ContributedTotalCost",
+"ContributedCostCenter",
+"ContributedFunctionalArea",
+"ContributedCostCode",
 ]
 
 # list of all InFORM Fuels columns, and NFPORS columns for ordering and testing 
 inForm_nfpors_all = [
+
 "OBJECTID",
-"Name",
-"EstimatedTreatmentID",
-"EstimatedActivityID",
-"ActualTreatmentID",
-"ActualActivityID",
-"IsPoint",
-"ParentID",
-"ParentObjectID",
-"IsParentTreatment",
-"LocalID",
-"Type",
-"Category",
-"Class",
-"OwnershipUnit",
-"OwnershipRegion",
-"OwnershipAgency",
-"OwnershipDepartment",
-"CongressionalDistrictNumber",
-"TribeName",
-"County",
-"State",
+"CreatedBy",
+"Unit",
+"Region",
+"Bureau",
+"Department",
 "Latitude",
 "Longitude",
 "CalculatedAcres",
-"Durability",
-"Priority",
-"Feasibility",
 "IsWUI",
-"IsFunded",
-"IsApproved",
-"EstimatedSuccessProbability",
 "InitiationDate",
-"InitiationFiscalYear",
-"InitiationFiscalQuarter",
 "CompletionDate",
-"CompletionFiscalYear",
-"CompletionFiscalQuarter",
-"CostCenter",
-"FunctionalArea",
-"WBS",
-"CostCode",
-"FundingSource",
-"FundingDepartment",
-"FundingAgency",
-"FundingRegion",
-"FundingUnit",
-"FundingSubUnit",
-"FundingTribe",
-"FundingUnitID",
-"EstimatedPersonnelCost",
-"EstimatedAssetCost",
-"EstimatedContractualCost",
-"EstimatedGrantsFixedCost",
-"EstimatedOtherCost",
-"EstimatedTotalCost",
 "Notes",
-"LocalApprovalDate",
-"RegionalApprovalDate",
-"AgencyApprovalDate",
-"DepartmentApprovalDate",
-"FundedDate",
-"Status",
-"StatusReason",
-"IsArchived",
-"LastModifiedDate",
 "LastModifiedBy",
 "CreatedOnDate",
-"CreatedBy",
+"LastModifiedDate",
+"Status",
+"StatusReason",
+"ActualTreatmentID",
+"ActualActivityID",
+"EstimatedTreatmentID",
+"EstimatedActivityID",
+"InitiationFiscalYear",
+"InitiationFiscalQuarter",
+"CompletionFiscalYear",
+"CompletionFiscalQuarter",
+"Class",
+"Category",
+"Type",
+"Durability",
+"Priority",
+"FundingSource",
+"CongressionalDistrictNumber",
+"County",
+"State",
+"EstimatedPersonnelCost",
+"EstimatedAssetCost",
+"EstimatedGrantsFixedCost",
+"EstimatedContractualCost",
+"EstimatedOtherCost",
+"EstimatedTotalCost",
+"LocalApprovalDate",
+"RegionalApprovalDate",
+"BureauApprovalDate",
+"DepartmentApprovalDate",
+"FundedDate",
+"EstimatedSuccessProbability",
+"Feasibility",
+"IsApproved",
+"IsFunded",
+"TribeName",
+"IsArchived",
+"Name",
+"IsPoint",
+"Agency",
+"AgencyApprovalDate",
+"TotalAcres",
+"IsDepartmentManual",
+"WBSID",
+"FundingUnit",
+"FundingRegion",
+"FundingAgency",
+"FundingDepartment",
+"FundingTribe",
+"CostCenter",
+"FunctionalArea",
+"CostCode",
 "CancelledDate",
-"BILFunding",
-"VegDeparturePercentageManual",
+"HasGroup",
+"GroupCount",
+"UnitID",
 "VegDeparturePercentageDerived",
+"VegDeparturePercentageManual",
 "IsVegetationManual",
-"TreatmentDriver",
+"IsRTRL",
+"FundingSubUnit",
 "FundingUnitType",
+"IsBIL",
+"BILFunding",
+"TreatmentDriver",
+"ContributedFundingSource",
+"ContributedNotes",
+"ContributedPersonnelCost",
+"ContributedAssetCost",
+"ContributedGrantsFixedCost",
+"ContributedContractualCost",
+"ContributedOtherCost",
+"ContributedTotalCost",
+"ContributedCostCenter",
+"ContributedFunctionalArea",
+"ContributedCostCode",
 "ProjectLatitude",  # project lat long for Activity class
 "ProjectLongitude",
 "AcresMonitored",
 "BILGeneralFunds",
 "BilThinningFunds",
 "BILPrescribedFireFunds",
-"BILControlLocationsFunds",
+"BiLControlLocationsFunds",
 "BilLaborersFunds",
 "IsBil",
 "GranteeCost",
@@ -409,7 +454,8 @@ inForm_nfpors_all = [
 # "EstimatedSuccessProbability", # this was added and renamed in the mapping 
 "Implementation Feasibility",
 "Durability",  
-"Treatment Priority"
+"Treatment Priority",
+"ProjectIsRtrl"
 ]
 
 
@@ -433,8 +479,8 @@ del_fields = [
 "AcresMonitored",
 "BILGeneralFunds",
 "BilThinningFunds",
-"BILPrescribedFireFunds",
-"BILControlLocationsFunds",
+"BiLPrescribedFireFunds",
+"BiLControlLocationsFunds",
 "BilLaborersFunds",
 "GranteeCost",
 "ProjectNotes",
@@ -464,194 +510,25 @@ df = df[inForm_nfpors_all]
 # Add a new column 'GUID' with generated GUIDs
 df['GUID'] = [str(uuid.uuid4()) for _ in range(len(df))]
 
-# Write the modified DataFrame to the output CSV
+# Write the DataFrame to the output CSV
 temp_csv = df.to_csv(inform_table, index=False)
 
-
-# Define the output table name (without the .csv extension)
+# output table name in the file geodatabase
 gis_derivation_table = "InFormFuelsFeatureCsvExtract"
 
 # Convert the CSV to a table in the file geodatabase
-
-# will have to delete the GIS created fields ("CreatedBy", "CreatedOnDate", "LastModifiedBy", "LastModifiedDate", "OBJECTID"")
 arcpy.TableToTable_conversion(in_rows=inform_table, out_path=gdb_path, out_name=gis_derivation_table)
 
 # full path to output table
 gis_derivation_table_fullPath = f'{gdb_path}\\{gis_derivation_table}'
 
-# Describe the header row of the file geodatabase table
-
-# describe(gis_derivation_table_fullPath)
+verify_fields = describe(gis_derivation_table_fullPath)
 
 # sys.exit()
+
 #------------------------------------------------------------
-# columns that have a one-to-many relationship or need a transformation 
+# columns that have a one-to-many relationship and/or need a transformation 
 
-update_fields = [
-    "Class", # [0]
-    "Latitude", # [1] This was set to TreatmentLatitude, but should be ProjectLatitude for Activity Class
-    "Longitude", # [2]
-    "ProjectLatitude", # [3]
-    "ProjectLongitude", # [4] 
-    "AcresMonitored", # [5]
-    "CalculatedAcres", # [6]
-    "BILGeneralFunds", # [7]
-    "BilThinningFunds", # [8]
-    "BILPrescribedFireFunds", # [9]
-    "BILControlLocationsFunds", # [10]
-    "BilLaborersFunds", # [11]
-    "BIL_Estimated_Personnel_Cost", # [12]
-    "BIL_Estimated_Asset_Cost", # [13]
-    "BIL_Estimated_Contractual_Cost", # [14]
-    "BIL_Estimated_Grants_Fixed_Costs", # [15]
-    "BIL_Estimated_Other_Cost", # [16]
-    "IsPoint", # [17]
-    "FundingSource", # [18]
-    "BILFunding", # [19]
-    "Notes", # [20]
-    "ProjectNotes", # [21]
-    "EstimatedTotalCost", # [22]
-    "Category", # [23]
-    "EstimatedPersonnelCost", # [24]
-    "EstimatedAssetCost", # [25]
-    "EstimatedContractualCost", # [26]
-    "EstimatedGrantsFixedCost",# [27]
-    "EstimatedOtherCost", # [28]
-    "EstimatedTreatmentID", # [29]
-    "EstimatedActivityID" # [30]
-]
-
-
-
-#  "BIL Estimated Personnel Cost",
-#     "BIL Estimated Asset Cost",
-#     "BIL Estimated Contractual Cost",
-#     "BIL Estimated Grants Fixed Costs",
-#     "BIL Estimated Other Cost",
-#     "Estimated Success Probability",
-#     "Implementation Feasibility",
-#     "Estimated Durability",
-#      # "EstimatedDurability"
-#     "Treatment Priority", 
-#     # "TreatmentPriority",
-#     "IsBil"
-
-
-
-# Open an update cursor to loop through the feature class
-with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, update_fields) as cursor:
-    for row in cursor:
-
-        Class = row[0]
-        Latitude = row[1]
-        Longitude = row[2]
-        ProjectLatitude = row[3]
-        ProjectLongitude = row[4] 
-        AcresMonitored = row[5]
-        CalculatedAcres = row[6]
-        BILGeneralFunds = row[7]
-        BilThinningFunds = row[8]
-        BILPrescribedFireFunds = row[9]
-        BILControlLocationsFunds = row[10]
-        BilLaborersFunds = row[11]
-        BILEstimatedPersonnelCost = row[12]
-        BILEstimatedAssetCost = row[13]
-        BILEstimatedContractualCost = row[14]
-        BILEstimatedGrantsFixedCost = row[15]
-        BILEstimatedOtherCost = row[16]
-        IsPoint = row[17]
-        FundingSource = row[18]
-        BILFunding = row[19]
-        Notes = row[20]
-        ProjectNotes = row[21]
-        EstimatedTotalCost = row[22]
-        category = row[23]
-        EstimatedTreatmentID = row[29]
-        EstimatedActivityID = row[30]
-        
-        # Treatment or Activity, set ActivityTreatmentID to proper field. Set to Treatment by default
-        if Class.rstrip().lower() == "activity":
-            row[30] = EstimatedTreatmentID
-            row[29] = None
-        else:
-            row[29] = EstimatedActivityID
-            row[30] = None
-
-
-
-        # latitude / longitude calculation
-        # If "Class" == Activity,  Latitude = ProjectLatitude, Longitude = ProjectLongitude. Else, as is. 
-        if Class.rstrip().lower() == "activity":
-            row[1] = ProjectLatitude
-            row[2] = ProjectLongitude
-
-        # Calculated Acres / is Point
-        #If Class is Activity (Column W) default to 10 acres, unless...they crosswalk in as "program management, 
-        # (and a few others) " - then they should be flagged as "is Point" and an acres of (X?) assigned
-        # Acres Monitored - Should replace the 0 from Acres planned when present
-
-        # print(f"class {Class}, category {category}")
-        
-        if CalculatedAcres is None or CalculatedAcres == 0:
-            if AcresMonitored is not None and AcresMonitored > 0:
-                row[6] = AcresMonitored
-
-        if Class.rstrip().lower() == "activity":
-            row[6] = 10
-            row[17] = 0
-
-        
-        # print(f"class {Class.lower()}, category {category.lower()}")
-        if Class.rstrip().lower() == "activity" and category.lower().rstrip() == "program management":
-            print(f"found program management")
-            print(f"class {Class}, category {category}")
-            row[6] = 1
-            row[17] = 1
-        
-
-        # print(f"acres {CalculatedAcres}, is point {IsPoint}")
-        # Funding Source
-
-        # If "PlannedDirectCost" (converted to "FundingSource") >= 1, look through "BILGeneralFunds","BILThinningFunds",	
-        # "BILPrescribedFireFunds","BILControlLocationsFunds","BILLaborersFunds", for funding source. Else leave as is.
-
-        if FundingSource is not None and FundingSource >= 1:
-            bil_total = 0
-            if BILGeneralFunds is not None and BILGeneralFunds >0:
-                bil_total += BILGeneralFunds
-            if BilThinningFunds is not None and BilThinningFunds >0:
-                bil_total += BilThinningFunds
-            if BILPrescribedFireFunds is not None and BILPrescribedFireFunds >0:
-                bil_total += BILPrescribedFireFunds
-            if BILControlLocationsFunds is not None and BILControlLocationsFunds >0:
-                bil_total += BILControlLocationsFunds
-            if BilLaborersFunds is not None and BilLaborersFunds >0:
-                bil_total += BilLaborersFunds
-                
-            row[18] = bil_total
-            
-        # PlannedDirectCost -> EstimatedTotalCost. 
-        # If planned direct costs are <=1  and BIL funding >= 1, use the BIL Funding Total and columns FC- FG to populate total cost and component cost fields
-
-        if EstimatedTotalCost is not None and EstimatedTotalCost <= 1 and BILFunding is not None and BILFunding >= 1:
-            
-            row[22] = BILFunding
-            row[24] = BILEstimatedPersonnelCost
-            row[25] = BILEstimatedAssetCost
-            row[26] = BILEstimatedContractualCost
-            row[27] = BILEstimatedGrantsFixedCost  
-            row[28] = BILEstimatedOtherCost
-            
-        # Project Notes
-        # Should not overwrite the ActivityTreament Notes, 
-        # but should be brough over if ActivityTreatmentNotes are blank
-        if Notes is None or Notes == "":
-            row[20] = ProjectNotes
-
-        # Update the feature with the new values
-        cursor.updateRow(row)
-
-# ------------------------------------------------------------
 # NFPORS to InFORM Fuels domain crosswalk
 
 table_data = {
@@ -713,8 +590,161 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, crosswalk_fields) as c
                 row[0] = table_data[t][1]  # Update Type
                 row[1] = table_data[t][0]  # Update Category
                 print (f"InFORM Fuels type {row[0]}, category {row[1]}")
+                
             
         cursor.updateRow(row)
+#------------------------------------------------------------
+
+update_fields = [
+    "Class", # [0]
+    "Latitude", # [1] This was set to TreatmentLatitude, but should be ProjectLatitude for Activity Class
+    "Longitude", # [2]
+    "ProjectLatitude", # [3]
+    "ProjectLongitude", # [4] 
+    "AcresMonitored", # [5]
+    "CalculatedAcres", # [6]
+    "BILGeneralFunds", # [7]
+    "BilThinningFunds", # [8]
+    "BILPrescribedFireFunds", # [9]
+    "BiLControlLocationsFunds", # [10]
+    "BilLaborersFunds", # [11]
+    "BIL_Estimated_Personnel_Cost", # [12]
+    "BIL_Estimated_Asset_Cost", # [13]
+    "BIL_Estimated_Contractual_Cost", # [14]
+    "BIL_Estimated_Grants_Fixed_Costs", # [15]
+    "BIL_Estimated_Other_Cost", # [16]
+    "IsPoint", # [17]
+    "FundingSource", # [18]
+    "BILFunding", # [19]
+    "Notes", # [20]
+    "ProjectNotes", # [21]
+    "EstimatedTotalCost", # [22]
+    "Category", # [23]
+    "EstimatedPersonnelCost", # [24]
+    "EstimatedAssetCost", # [25]
+    "EstimatedContractualCost", # [26]
+    "EstimatedGrantsFixedCost",# [27]
+    "EstimatedOtherCost", # [28]
+    "EstimatedTreatmentID", # [29]
+    "EstimatedActivityID", # [30]
+    "IsRTRL", # [31]
+    "ProjectIsRtrl" # [32]
+]
+
+for f in update_fields:
+    if f not in verify_fields:
+        print (f"field {f} not in table")
+
+
+
+# Open an update cursor to loop through the feature class
+with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, update_fields) as cursor:
+    for row in cursor:
+
+        Class = row[0]
+        Latitude = row[1]
+        Longitude = row[2]
+        ProjectLatitude = row[3]
+        ProjectLongitude = row[4] 
+        AcresMonitored = row[5]
+        CalculatedAcres = row[6]
+        BILGeneralFunds = row[7]
+        BilThinningFunds = row[8]
+        BILPrescribedFireFunds = row[9]
+        BILControlLocationsFunds = row[10]
+        BilLaborersFunds = row[11]
+        BILEstimatedPersonnelCost = row[12]
+        BILEstimatedAssetCost = row[13]
+        BILEstimatedContractualCost = row[14]
+        BILEstimatedGrantsFixedCost = row[15]
+        BILEstimatedOtherCost = row[16]
+        IsPoint = row[17]
+        FundingSource = row[18]
+        BILFunding = row[19]
+        Notes = row[20]
+        ProjectNotes = row[21]
+        EstimatedTotalCost = row[22]
+        category = row[23]
+        EstimatedTreatmentID = row[29]
+        EstimatedActivityID = row[30]
+        IsRtrl = row[31]
+        ProjectIsRtrl = row[32]
+        
+        # Treatment or Activity, set ActivityTreatmentID to proper field. Set to Treatment by default
+        if Class.rstrip().lower() == "activity":
+            row[30] = EstimatedTreatmentID
+            row[29] = None
+        else:
+            row[29] = EstimatedActivityID
+            row[30] = None
+
+        # latitude / longitude calculation
+        # If "Class" == Activity,  Latitude = ProjectLatitude, Longitude = ProjectLongitude. Else, as is. 
+        if Class.rstrip().lower() == "activity":
+            row[1] = ProjectLatitude
+            row[2] = ProjectLongitude
+
+        # Calculated Acres / is Point
+        #If Class is Activity (Column W) default to 10 acres, unless...they crosswalk in as "program management, 
+        # (and a few others) " - then they should be flagged as "is Point" and an acres of (X?) assigned
+        # Acres Monitored - Should replace the 0 from Acres planned when present
+
+        if CalculatedAcres is None or CalculatedAcres == 0:
+            if AcresMonitored is not None and AcresMonitored > 0:
+                row[6] = AcresMonitored
+
+        if Class.rstrip().lower() == "activity":
+            row[6] = 10
+            row[17] = 0
+
+        # print(f"class {Class.lower()}, category {category.lower()}")
+        if Class.rstrip().lower() == "activity" and category.lower().rstrip() == "program management":
+            print(f"found program management")
+            print(f"class {Class}, category {category}")
+            row[6] = 1
+            row[17] = 1
+
+        # If "PlannedDirectCost" (converted to "FundingSource") >= 1, look through "BILGeneralFunds","BILThinningFunds",	
+        # "BILPrescribedFireFunds","BILControlLocationsFunds","BILLaborersFunds", for funding source. Else leave as is.
+
+        if FundingSource is not None and FundingSource >= 1:
+            bil_total = 0
+            if BILGeneralFunds is not None and BILGeneralFunds >0:
+                bil_total += BILGeneralFunds
+            if BilThinningFunds is not None and BilThinningFunds >0:
+                bil_total += BilThinningFunds
+            if BILPrescribedFireFunds is not None and BILPrescribedFireFunds >0:
+                bil_total += BILPrescribedFireFunds
+            if BILControlLocationsFunds is not None and BILControlLocationsFunds >0:
+                bil_total += BILControlLocationsFunds
+            if BilLaborersFunds is not None and BilLaborersFunds >0:
+                bil_total += BilLaborersFunds
+                
+            row[18] = bil_total
+            
+        # PlannedDirectCost -> EstimatedTotalCost. 
+        # If planned direct costs are <=1  and BIL funding >= 1, use the BIL Funding Total and columns FC- FG to populate total cost and component cost fields
+
+        if EstimatedTotalCost is not None and EstimatedTotalCost <= 1 and BILFunding is not None and BILFunding >= 1:
+            
+            row[22] = BILFunding
+            row[24] = BILEstimatedPersonnelCost
+            row[25] = BILEstimatedAssetCost
+            row[26] = BILEstimatedContractualCost
+            row[27] = BILEstimatedGrantsFixedCost  
+            row[28] = BILEstimatedOtherCost
+            
+        # Project Notes, should not overwrite the ActivityTreament Notes, 
+        # but should be brough over if ActivityTreatmentNotes are blank
+        if Notes is None or Notes == "":
+            row[20] = ProjectNotes
+
+        # IsRtrl, ProjectIsRtrl. If RTRL does not match between two NPFORS columns, set to null. 
+        if IsRtrl is not None and ProjectIsRtrl is not None and ProjectIsRtrl.lower().rstrip() >= IsRtrl.lower().rstrip():
+            row[31] = None
+            
+        cursor.updateRow(row)
+
 #------------------------------------------------------------
 # Create points feature class from table
 
@@ -748,7 +778,7 @@ with arcpy.da.SearchCursor("JU_sj", fields) as cursor:
         ju_dict[guid] = val_list
 
 # InFORM Fuels fields
-fields = ["GUID", "OwnershipDepartment", "OwnershipUnit", "OwnershipAgency"]
+fields = ["GUID", "Department", "Unit", "Bureau"]
 with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
     for row in cursor:
         guid = row[0]
@@ -765,10 +795,7 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
   
 arcpy.analysis.SpatialJoin(Indexed_Points, states, "states_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="GUID \"GUID\" true true false 8000 Text 0 0,First,#,C:\\Users\\warmstrong\\Documents\\work\\InFORM\\20230912 NFPORS InFORM Crosswalk Script\\data input\\data.gdb\\InFormFuelsFeatureCsvExtract_Points,GUID,0,8000;STATE_NAME \"STATE_NAME\" true true false 25 Text 0 0,First,#,States,STATE_NAME,0,25", match_option="INTERSECT", search_radius="", distance_field_name="")
 
-# Initialize an empty dictionary
 state_dict = {}
-
-# Spatial Join State fields
 fields = ["GUID", "STATE_NAME"]
 
 # Use a search cursor to iterate through the data and populate the dictionary
@@ -797,10 +824,7 @@ arcpy.analysis.SpatialJoin(Indexed_Points, county, "county_sj", join_operation="
 
 # describe("county_sj")
 
-# Initialize an empty dictionary
 county_dict = {}
-
-# Spatial Join State fields
 fields = ["GUID", "CountyName"]
 
 # Use a search cursor to iterate through the data and populate the dictionary
@@ -828,12 +852,9 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
 # Spatial Join regions to points
 arcpy.analysis.SpatialJoin(Indexed_Points, bia_regions, "regions_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="GUID \"GUID\" true true false 8000 Text 0 0,First,#,InFormFuelsFeatureCsvExtract_Points,GUID,0,8000;REGIONNAME \"REGIONNAME\" true true false 2000000000 Text 0 0,First,#,BIA_Region,REGIONNAME,0,2000000000", match_option="INTERSECT", search_radius="", distance_field_name="")
 
-describe("regions_sj")
+# describe("regions_sj")
 
-# Initialize an empty dictionary
 region_dict = {}
-
-# Spatial Join State fields
 fields = ["GUID", "REGIONNAME"]
 
 # Use a search cursor to iterate through the data and populate the dictionary
@@ -845,7 +866,7 @@ with arcpy.da.SearchCursor("regions_sj", fields) as cursor:
         region_dict[guid] = val_list
 
 # InFORM Fuels fields
-fields = ["GUID", "OwnershipRegion"]
+fields = ["GUID", "Region"]
 with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
     for row in cursor:
         guid = row[0]
@@ -860,10 +881,7 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
 
 arcpy.analysis.SpatialJoin(Indexed_Points, con_districts, "cd_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="GUID \"GUID\" true true false 8000 Text 0 0,First,#,C:\\Users\\warmstrong\\Documents\\work\\InFORM\\20230912 NFPORS InFORM Crosswalk Script\\data input\\data.gdb\\InFormFuelsFeatureCsvExtract_Points,GUID,0,8000;DISTRICTID \"District ID\" true true false 4 Text 0 0,First,#,USA_118th_Congressional_Districts,DISTRICTID,0,4;STATE_ABBR \"State Abbreviation\" true true false 2 Text 0 0,First,#,USA_118th_Congressional_Districts,STATE_ABBR,0,2", match_option="INTERSECT", search_radius="", distance_field_name="") 
 
-# Initialize an empty dictionary
 cd_dict = {}
-
-# Spatial Join Congressional District fields
 fields = ["GUID", "DISTRICTID", "STATE_ABBR"]
 
 # Use a search cursor to iterate through the data and populate the dictionary
@@ -1011,7 +1029,7 @@ with arcpy.da.SearchCursor("tribes_sj", fields) as cursor:
 #     print (f"{v}: {tr_name_dict[v]}")
 # sys.exit()
         
-fields = ["GUID", "TribeName", "OwnershipUnit"]
+fields = ["GUID", "TribeName", "Unit"]
 
 with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
     for row in cursor:
@@ -1034,21 +1052,29 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
         # Update the feature with the new values
         # row[1] = tr_sj
         # print (f"row[1] - tribename: {row[1]}")
-        # print (f"row[2] - ownershipunit: {row[2]}")
+        # print (f"row[2] - Unit: {row[2]}")
         cursor.updateRow(row)
 
 for v in tr_name_dict:
     print (f"{v}: {tr_name_dict[v]}")
 
 # InFORM Fuels fields
-fields = ["GUID", "TribeName", "OwnershipUnit", "FundingUnit"]
+fields = ["GUID", "TribeName", "Unit", "FundingUnit", "FundingTribe"]
 with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
     for row in cursor:
         ownership = row[2]
         guid = row[0]
         if guid in tr_name_dict:
+            
+            # set tribe name to full name
             row[1] = tr_name_dict[guid][0]
+        
+        # set funding unit to ownership unit
         row[3] = ownership
+
+        # set funding tribe to tribe full name
+        row[4] = tr_name_dict[guid][0]
+
         # Update the feature with the new values
         cursor.updateRow(row)
 
@@ -1057,11 +1083,25 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
 #           print(f"Tribal land/tribe {row[1]}")
 
 
-sys.exit()
-
 #----------------------------------------------------------------------------------
 
-# Write the modified DataFrame to the output CSV
-df.to_csv(inform_table, index=False)
+output_folder = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data output'
+output_excel = 'output.xlsx'
+out_path = os.path.join(output_folder, output_excel)
 
-print("CSV transformation complete.")
+# arcpy.TableToTable_conversion(gis_derivation_table_fullPath, r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data output', output_csv.csv)
+arcpy.conversion.TableToExcel(gis_derivation_table_fullPath, os.path.join(output_folder, out_path))
+
+df = pd.read_excel(out_path)
+
+# Step 4: Check for fields in the DataFrame that are not in list1 and remove them
+fields_to_remove = [col for col in df.columns if col not in inForm_fields_all]
+df.drop(columns=fields_to_remove, inplace=True)
+
+# Write the DataFrame to the output CSV
+output_csv = 'output.csv'
+out_csv_path = os.path.join(output_folder, output_csv)
+out_csv = df.to_csv(out_csv_path, index=False)
+
+# Now, df contains only the columns specified in list1
+print(df)
