@@ -948,192 +948,192 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
 
 #---------------------------------------------------------------------------------- 
 
-# Vegetation Departure Derivation
-# US Veg Departure
+# # Vegetation Departure Derivation
+# # US Veg Departure
 
-# Extract raster Veg Departure Values to Points 
+# # Extract raster Veg Departure Values to Points 
 
-def vdep(layer):
+# def vdep(layer):
 
-    arcpy.sa.ExtractValuesToPoints(Indexed_Points, layer, "vegDp_extract", interpolate_values="NONE", add_attributes="VALUE_ONLY")
+#     arcpy.sa.ExtractValuesToPoints(Indexed_Points, layer, "vegDp_extract", interpolate_values="NONE", add_attributes="VALUE_ONLY")
 
-    print (f"Calculating Vegetation Departure for Landfire: {layer}")
-    # describe("vegDp_extract")
-
-
-    # Only calculate veg dep if there are points in the layer
-    # Use GetCount_management to count the features
-    # result = arcpy.GetCount_management("vegDp_extract")
-
-    # # Get the count as an integer
-    # count = int(result.getOutput(0))
+#     print (f"Calculating Vegetation Departure for Landfire: {layer}")
+#     # describe("vegDp_extract")
 
 
+#     # Only calculate veg dep if there are points in the layer
+#     # Use GetCount_management to count the features
+#     # result = arcpy.GetCount_management("vegDp_extract")
 
-    # Initialize an empty dictionary
-    vegDep_dict = {}
+#     # # Get the count as an integer
+#     # count = int(result.getOutput(0))
 
-    # Spatial Join Congressional District fields
-    fields = ["GUID", "RASTERVALU"]
 
-    # Use a search cursor to iterate through the data and populate the dictionary
-    with arcpy.da.SearchCursor("vegDp_extract", fields) as cursor:
-        for row in cursor:
-            guid = row[0] 
-            vd = row[1]
-            val_list = [vd]
-            vegDep_dict[guid] = val_list
 
-    # InFORM Fuels fields
-    fields = ["GUID", "VegDeparturePercentageDerived"]
+#     # Initialize an empty dictionary
+#     vegDep_dict = {}
 
-    with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
-        for row in cursor:
-            guid = row[0]
-            if guid in vegDep_dict:
-                row[1] = vegDep_dict[guid][0]
+#     # Spatial Join Congressional District fields
+#     fields = ["GUID", "RASTERVALU"]
+
+#     # Use a search cursor to iterate through the data and populate the dictionary
+#     with arcpy.da.SearchCursor("vegDp_extract", fields) as cursor:
+#         for row in cursor:
+#             guid = row[0] 
+#             vd = row[1]
+#             val_list = [vd]
+#             vegDep_dict[guid] = val_list
+
+#     # InFORM Fuels fields
+#     fields = ["GUID", "VegDeparturePercentageDerived"]
+
+#     with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
+#         for row in cursor:
+#             guid = row[0]
+#             if guid in vegDep_dict:
+#                 row[1] = vegDep_dict[guid][0]
            
-            # Update the feature with the new values
+#             # Update the feature with the new values
             
-            if row[1] is not None:
-                cursor.updateRow(row)
+#             if row[1] is not None:
+#                 cursor.updateRow(row)
 
-    with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
-        for row in cursor:
-            print(f"veg dep {row[1]}")
+#     with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
+#         for row in cursor:
+#             print(f"veg dep {row[1]}")
 
 
-# run vegetation departure derivation on US Veg Departure and HI Veg Departure
-veg_departure_layers = [us_vegDep]
+# # run vegetation departure derivation on US Veg Departure and HI Veg Departure
+# veg_departure_layers = [us_vegDep]
 
-# veg_departure_layers = [us_vegDep, hi_vegDep]
+# # veg_departure_layers = [us_vegDep, hi_vegDep]
 
-for layer in veg_departure_layers:
-    vdep(layer)
+# for layer in veg_departure_layers:
+#     vdep(layer)
 
 #------------------------------------------------------------------------------------------------
 # Tribe Name and BIA Agency Derivation
 # describe(tribal_leaders)
 
-# tribal leaders dictionary 
-tribal_leaders_dict = {}
+# # tribal leaders dictionary 
+# tribal_leaders_dict = {}
 
-fields = ["TribeFullName", "BIAAgency"]
+# fields = ["TribeFullName", "BIAAgency"]
 
-# Use a search cursor to iterate through the data and populate the dictionary
-with arcpy.da.SearchCursor(tribal_leaders, fields) as cursor:
-    for row in cursor:
-        tname = row[0] 
-        agency = row[1]
-        val_list = [agency]
-        tribal_leaders_dict[tname] = val_list
+# # Use a search cursor to iterate through the data and populate the dictionary
+# with arcpy.da.SearchCursor(tribal_leaders, fields) as cursor:
+#     for row in cursor:
+#         tname = row[0] 
+#         agency = row[1]
+#         val_list = [agency]
+#         tribal_leaders_dict[tname] = val_list
 
-# for v in tribal_leaders_dict:
-#     print (f"{v}: {tribal_leaders_dict[v]}")
-
-
-# if repeating for BIA with new data, run this code on first import
-# Process: Add Field (Add Field) (management)
-# arcpy.management.AddField(tribe_name, field_name="tribe_name_edit", field_type="TEXT", field_precision=None, field_scale=None, field_length=None, field_alias="", field_is_nullable="NULLABLE", field_is_required="NON_REQUIRED", field_domain="")[0]
-
-# # Process: Calculate Field (Calculate Field) (management)
-# arcpy.management.CalculateField(tribe_name, field="tribe_name_edit", expression="!NAME!", expression_type="PYTHON3", code_block="", field_type="TEXT", enforce_domains="NO_ENFORCE_DOMAINS")
-
-# arcpy.analysis.SpatialJoin(Indexed_Points, tribe_name, "tribes_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="guid \"guid\" true true false 255 Text 0 0,First,#,InFormFuelsFeatureCsvExtract_Points,GUID,0,8000;tribe_name \"tribe_name\" true true false 255 Text 0 0,First,#,TribeName,tribe_name_edit,0,255", match_option="INTERSECT", search_radius="", distance_field_name="")
-arcpy.analysis.SpatialJoin(Indexed_Points, tribe_name, "tribes_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="", match_option="INTERSECT", search_radius="", distance_field_name="")
-
-# describe("tribes_sj")
-
-# with arcpy.da.SearchCursor("tribes_sj", ["NAME_1"]) as cursor:
-#         for row in cursor:
-#             print(f"tribe name: {row[0]}")
+# # for v in tribal_leaders_dict:
+# #     print (f"{v}: {tribal_leaders_dict[v]}")
 
 
-# sys.exit()
+# # if repeating for BIA with new data, run this code on first import
+# # Process: Add Field (Add Field) (management)
+# # arcpy.management.AddField(tribe_name, field_name="tribe_name_edit", field_type="TEXT", field_precision=None, field_scale=None, field_length=None, field_alias="", field_is_nullable="NULLABLE", field_is_required="NON_REQUIRED", field_domain="")[0]
 
-# Initialize an empty dictionary
-tr_name_dict = {}
+# # # Process: Calculate Field (Calculate Field) (management)
+# # arcpy.management.CalculateField(tribe_name, field="tribe_name_edit", expression="!NAME!", expression_type="PYTHON3", code_block="", field_type="TEXT", enforce_domains="NO_ENFORCE_DOMAINS")
 
-fields = ["GUID", "TRIBE_NAME","NAME_1"]
+# # arcpy.analysis.SpatialJoin(Indexed_Points, tribe_name, "tribes_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="guid \"guid\" true true false 255 Text 0 0,First,#,InFormFuelsFeatureCsvExtract_Points,GUID,0,8000;tribe_name \"tribe_name\" true true false 255 Text 0 0,First,#,TribeName,tribe_name_edit,0,255", match_option="INTERSECT", search_radius="", distance_field_name="")
+# arcpy.analysis.SpatialJoin(Indexed_Points, tribe_name, "tribes_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="", match_option="INTERSECT", search_radius="", distance_field_name="")
 
-# Use a search cursor to iterate through the data and populate the dictionary
-with arcpy.da.SearchCursor("tribes_sj", fields) as cursor:
-    for row in cursor:
-        guid = row[0] 
-        tribe_full_name = row[1]
-        tribe_short_name = row[2]
-        val_list = [tribe_full_name, tribe_short_name]
-        tr_name_dict[guid] = val_list
+# # describe("tribes_sj")
 
+# # with arcpy.da.SearchCursor("tribes_sj", ["NAME_1"]) as cursor:
+# #         for row in cursor:
+# #             print(f"tribe name: {row[0]}")
+
+
+# # sys.exit()
+
+# # Initialize an empty dictionary
+# tr_name_dict = {}
+
+# fields = ["GUID", "TRIBE_NAME","NAME_1"]
+
+# # Use a search cursor to iterate through the data and populate the dictionary
+# with arcpy.da.SearchCursor("tribes_sj", fields) as cursor:
+#     for row in cursor:
+#         guid = row[0] 
+#         tribe_full_name = row[1]
+#         tribe_short_name = row[2]
+#         val_list = [tribe_full_name, tribe_short_name]
+#         tr_name_dict[guid] = val_list
+
+
+# # for v in tr_name_dict:
+# #     print (f"{v}: {tr_name_dict[v]}")
+# # sys.exit()
+        
+# fields = ["GUID", "TribeName", "Unit"]
+
+# with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
+#     for row in cursor:
+#         guid = row[0] 
+#         tribe_name_full = tr_name_dict[guid][0]
+#         tribe_name_short = tr_name_dict[guid][1]
+   
+#         # check if tribe name in tribal leaders dict
+#         for key, value in tribal_leaders_dict.items():
+#             # print(f"key: {key}, value: {value}")
+#             if tribe_name_full is not None and tribe_name_full.rstrip().lower() in key.rstrip().lower():
+#                 print (f"Match found: {key}: {value}")
+#                 row[2] = value[0]
+#                 break
+#             elif tribe_name_short is not None and tribe_name_short.rstrip().lower() in key.rstrip().lower():
+#                 print (f"Match found: {key}: {value}")
+#                 row[2] = value[0]
+#                 break   
+
+#         # Update the feature with the new values
+#         # row[1] = tr_sj
+#         # print (f"row[1] - tribename: {row[1]}")
+#         # print (f"row[2] - Unit: {row[2]}")
+#         cursor.updateRow(row)
 
 # for v in tr_name_dict:
 #     print (f"{v}: {tr_name_dict[v]}")
-# sys.exit()
-        
-fields = ["GUID", "TribeName", "Unit"]
 
-with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
-    for row in cursor:
-        guid = row[0] 
-        tribe_name_full = tr_name_dict[guid][0]
-        tribe_name_short = tr_name_dict[guid][1]
-   
-        # check if tribe name in tribal leaders dict
-        for key, value in tribal_leaders_dict.items():
-            # print(f"key: {key}, value: {value}")
-            if tribe_name_full is not None and tribe_name_full.rstrip().lower() in key.rstrip().lower():
-                print (f"Match found: {key}: {value}")
-                row[2] = value[0]
-                break
-            elif tribe_name_short is not None and tribe_name_short.rstrip().lower() in key.rstrip().lower():
-                print (f"Match found: {key}: {value}")
-                row[2] = value[0]
-                break   
-
-        # Update the feature with the new values
-        # row[1] = tr_sj
-        # print (f"row[1] - tribename: {row[1]}")
-        # print (f"row[2] - Unit: {row[2]}")
-        cursor.updateRow(row)
-
-for v in tr_name_dict:
-    print (f"{v}: {tr_name_dict[v]}")
-
-# InFORM Fuels fields
-fields = ["GUID", "TribeName", "Unit", "FundingUnit", "FundingTribe"]
-with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
-    for row in cursor:
-        ownership = row[2]
-        guid = row[0]
-        if guid in tr_name_dict:
+# # InFORM Fuels fields
+# fields = ["GUID", "TribeName", "Unit", "FundingUnit", "FundingTribe"]
+# with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
+#     for row in cursor:
+#         ownership = row[2]
+#         guid = row[0]
+#         if guid in tr_name_dict:
             
-            # set tribe name to full name
-            row[1] = tr_name_dict[guid][0]
+#             # set tribe name to full name
+#             row[1] = tr_name_dict[guid][0]
         
-        # set funding unit to ownership unit
-        row[3] = ownership
+#         # set funding unit to ownership unit
+#         row[3] = ownership
 
-        # set funding tribe to tribe full name
-        row[4] = tr_name_dict[guid][0]
+#         # set funding tribe to tribe full name
+#         row[4] = tr_name_dict[guid][0]
 
-        # Update the feature with the new values
-        cursor.updateRow(row)
+#         # Update the feature with the new values
+#         cursor.updateRow(row)
 
-# with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
-#       for row in cursor:
-#           print(f"Tribal land/tribe {row[1]}")
+# # with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
+# #       for row in cursor:
+# #           print(f"Tribal land/tribe {row[1]}")
 
-#----------------------------------------------------------------------------------
-# Vegetation Depatrure > 100 flag
+# #----------------------------------------------------------------------------------
+# # Vegetation Depatrure > 100 flag
 
-fields= ["VegDeparturePercentageDerived", "VegDeparture_Flag"]
+# fields= ["VegDeparturePercentageDerived", "VegDeparture_Flag"]
 
-with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
-        for row in cursor:
-            vd = row[0]
-            if vd is not None and float(vd) >= 100:
-                row[1] = 1
-            cursor.updateRow(row)
+# with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
+#         for row in cursor:
+#             vd = row[0]
+#             if vd is not None and float(vd) >= 100:
+#                 row[1] = 1
+#             cursor.updateRow(row)
 #----------------------------------------------------------------------------------
 
 output_folder = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data output\10192023 BIA updates output'

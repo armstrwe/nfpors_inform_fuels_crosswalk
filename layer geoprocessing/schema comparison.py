@@ -231,7 +231,7 @@ list1 = [
     "BureauApprovalDate",
     "DepartmentApprovalDate",
     "FundedDate",
-    "EstimatedSuccessProbability",  # Updated name
+    "EstimatedSuccessProbability",
     "Feasibility",
     "IsApproved",
     "IsFunded",
@@ -259,7 +259,7 @@ list1 = [
     "VegDeparturePercentageDerived",
     "VegDeparturePercentageManual",
     "IsVegetationManual",
-    "IsRTRL",
+    "IsRtrl",
     "FundingSubUnit",
     "FundingUnitType",
     "IsBIL",
@@ -276,62 +276,66 @@ list1 = [
     "ContributedCostCenter",
     "ContributedFunctionalArea",
     "ContributedCostCode",
-    "Shape_Length",
-    "Shape_AreaProjectLatitude",
-    "ProjectLongitude",
-    "AcresMonitored",
-    "BILGeneralFunds",
-    "BilThinningFunds",
-    "BILPrescribedFireFunds",
-    "BiLControlLocationsFunds",
-    "BilLaborersFunds",
-    "GranteeCost",
-    "ProjectNotes",
-    "BIL Estimated Personnel Cost",
-    "BIL Estimated Grants Fixed Costs",
-    "BIL Estimated Asset Cost",
-    "BIL Estimated Contractual Cost",
-    "BIL Estimated Other Cost",
-    "Implementation Feasibility",  # Updated name
-    "Treatment_Priority",
-    "ProjectIsRtrl",
-    "GUID"
-]
-
-list2 = [
-    "Class",
-    "Latitude",
-    "Longitude",
     "ProjectLatitude",
     "ProjectLongitude",
     "AcresMonitored",
-    "CalculatedAcres",
-    "BILGeneralFunds",
+    "BiLGeneralFunds",
     "BilThinningFunds",
     "BiLPrescribedFireFunds",
     "BiLControlLocationsFunds",
     "BilLaborersFunds",
+    "GranteeCost",
+    "ProjectNotes",
     "BIL_Estimated_Personnel_Cost",
+    "BIL_Estimated_Grants_Fixed_Costs",
     "BIL_Estimated_Asset_Cost",
     "BIL_Estimated_Contractual_Cost",
-    "BIL_Estimated_Grants_Fixed_Costs",
     "BIL_Estimated_Other_Cost",
-    "IsPoint",
-    "FundingSource",
-    "BILFunding",
-    "Notes",
-    "ProjectNotes",
-    "EstimatedTotalCost",
-    "Category",
-    "EstimatedPersonnelCost",
-    "EstimatedAssetCost",
-    "EstimatedContractualCost",
-    "EstimatedGrantsFixedCost",
-    "EstimatedOtherCost",
-    "EstimatedTreatmentID",
-    "EstimatedActivityID",
-    "IsRTRL",
-    "ProjectIsRtrl"
+    "Implementation_Feasibility",
+    "Treatment_Priority",
+    "ProjectIsRtrlFireRegime",
+    "PreTreatmentClass1",
+    "PreTreatmentClass2",
+    "PreTreatmentClass3",
+    "VegDeparture_Flag",
+    "GUID"
+]
+
+list2 = [
+      "Class",    # [0]
+    "Latitude",     # [1] This was set to TreatmentLatitude, but should be ProjectLatitude for Activity Class
+    "Longitude",    # [2]
+    "ProjectLatitude",  # [3]
+    "ProjectLongitude",     # [4] 
+    "AcresMonitored",   # [5]
+    "CalculatedAcres",  # [6]
+    "BiLGeneralFunds",  # [7]
+    "BilThinningFunds",     # [8]
+    "BiLPrescribedFireFunds",   # [9]
+    "BiLControlLocationsFunds",     # [10]
+    "BilLaborersFunds",     # [11]
+    "BIL_Estimated_Personnel_Cost",     # [12]
+    "BIL_Estimated_Asset_Cost",     # [13]
+    "BIL_Estimated_Contractual_Cost",   # [14]
+    "BIL_Estimated_Grants_Fixed_Costs",     # [15]
+    "BIL_Estimated_Other_Cost",     # [16]
+    "IsPoint",  # [17]
+    "FundingSource",    # [18]
+    "BILFunding",   # [19]
+    "Notes",    # [20]
+    "ProjectNotes",     # [21]
+    "EstimatedTotalCost",   # [22]
+    "Category",     # [23]
+    "EstimatedPersonnelCost",   # [24]
+    "EstimatedAssetCost",   # [25]
+    "EstimatedContractualCost",     # [26]
+    "EstimatedGrantsFixedCost", # [27]
+    "EstimatedOtherCost",   # [28]
+    "EstimatedTreatmentID",     # [29]
+    "EstimatedActivityID",  # [30]
+    "IsRtrl",   # [31]
+    "ProjectIsRtrl",    # [32]
+    "IsBIL"     # [33]
 ]
 
 # Create list3 containing values from list2 that are not in list1

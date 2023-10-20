@@ -1,0 +1,38 @@
+"vccImageService": {
+    "conusUrl": "https://lfps.usgs.gov/arcgis/rest/services/Landfire_LF220/US_220VCC/ImageServer/computeStatisticsHistograms",
+    "hawaiiUrl" : "https://lfps.usgs.gov/arcgis/rest/services/Landfire_LF220/HI_220VCC/ImageServer/computeStatisticsHistograms",
+    "conusWkid": 5070,
+    "hawaiiWkid": 102007
+  },
+
+
+const serviceConfig = config.vdepImageService;
+    const endPoint = (isConus) ? serviceConfig.conusUrl : serviceConfig.hawaiiUrl;
+    const wkid = (isConus) ? serviceConfig.conusWkid : serviceConfig.hawaiiWkid;
+    const projectedGeometry = projection.project(polygon, new SpatialReference({wkid: wkid}));
+
+    return new Promise((resolve, reject) => {
+
+      new Request().makeRequest({
+          url: endPoint,
+          method: 'get',
+          data: {
+              f: 'json',
+              geometryType: 'esriGeometryPolygon',
+              geometry: JSON.stringify(projectedGeometry)
+          }
+      }).then(
+          resp => {
+            if(resp && resp.statistics && resp.statistics.length > 0){
+              const meanPixelValue = resp.statistics[0].mean;
+              const nearestVDEP = Math.round(meanPixelValue);
+              resolve(nearestVDEP);
+            } else {
+              resolve(null);
+            }
+          },
+          error => {
+            reject(`Vegetation Departure Percentage Derivation is unavailable: ${error.code}`)
+          }
+      );
+    });
