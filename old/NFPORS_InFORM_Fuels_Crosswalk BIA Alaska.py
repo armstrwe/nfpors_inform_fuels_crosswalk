@@ -14,7 +14,7 @@ from collections import Counter
 
 # Replace these file paths with your actual file paths
 # nfpors_table = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\Edited BIA_3year_data_for_Import_9_14_23 TESTING.xlsx'
-nfpors_table = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\10042023 BIA Import\10 20 2023 Alaska Updates.xlsx'
+nfpors_table = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\10042023 BIA Import\bia import alaska final.xlsx'
 
 inform_table = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\InFormFuelsFeatureCsvExtract BIA.csv'
 
@@ -238,11 +238,9 @@ column_mapping = {
     "BureauApprovalDate": "AgencyApprovalDate",
     "TreatmentDriver": "TreatmentDriver",
     "Estimated Durability":"Durability",
-    "Treatment Priority":"Priority",
+    "Estimated Success Probability":"Priority",
     "ActivityTreatmentNotes":"Notes",
     "IsBil":"IsBIL",
-    "Implementation Feasibility":"Feasibility",
-    "Estimated Success Probability":"EstimatedSuccessProbability"
 
 }
 
@@ -719,14 +717,15 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, update_fields) as curs
                 row[6] = AcresMonitored
 
         if Class.rstrip().lower() == "activity":
-            row[6] = 0
-            row[17] = 1
+            row[6] = 10
+            row[17] = 0
 
         # print(f"class {Class.lower()}, category {category.lower()}")
-        # if Class.rstrip().lower() == "activity" and category.lower().rstrip() == "program management":
-        #     #print(f"class {Class}, category {category}")
-        #     row[6] = 0
-        #     row[17] = 1
+        if Class.rstrip().lower() == "activity" and category.lower().rstrip() == "program management":
+            print(f"found program management")
+            print(f"class {Class}, category {category}")
+            row[6] = 1
+            row[17] = 1
 
         # If "PlannedDirectCost" (converted to "FundingSource") >= 1, look through "BILGeneralFunds","BILThinningFunds",	
         # "BILPrescribedFireFunds","BILControlLocationsFunds","BILLaborersFunds", for funding source. Else leave as is.
@@ -948,10 +947,10 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
 
 #---------------------------------------------------------------------------------- 
 
-# # Vegetation Departure Derivation
-# # US Veg Departure
+# Vegetation Departure Derivation
+# US Veg Departure
 
-# # Extract raster Veg Departure Values to Points 
+# Extract raster Veg Departure Values to Points 
 
 # def vdep(layer):
 
@@ -1015,7 +1014,7 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
 # Tribe Name and BIA Agency Derivation
 # describe(tribal_leaders)
 
-# # tribal leaders dictionary 
+# tribal leaders dictionary 
 # tribal_leaders_dict = {}
 
 # fields = ["TribeFullName", "BIAAgency"]
@@ -1119,12 +1118,12 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
 #         # Update the feature with the new values
 #         cursor.updateRow(row)
 
-# # with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
-# #       for row in cursor:
-# #           print(f"Tribal land/tribe {row[1]}")
+# with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
+#       for row in cursor:
+#           print(f"Tribal land/tribe {row[1]}")
 
-# #----------------------------------------------------------------------------------
-# # Vegetation Depatrure > 100 flag
+#----------------------------------------------------------------------------------
+# Vegetation Depatrure > 100 flag
 
 # fields= ["VegDeparturePercentageDerived", "VegDeparture_Flag"]
 
@@ -1136,34 +1135,32 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
 #             cursor.updateRow(row)
 #----------------------------------------------------------------------------------
 
-output_folder = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data output\10192023 BIA updates output\temp'
-output_excel = 'alaska_output_gisTable_WORKING.xlsx'
+output_folder = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data output'
+output_excel = 'output.xlsx'
 out_path = os.path.join(output_folder, output_excel)
-
-# Convert to excel to putput from GIS table
 
 # arcpy.TableToTable_conversion(gis_derivation_table_fullPath, r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data output', output_csv.csv)
 arcpy.conversion.TableToExcel(gis_derivation_table_fullPath, os.path.join(output_folder, out_path))
 
-
-# add excel back into dataframe 
-
 df = pd.read_excel(out_path)
+
+
+# output csv for qc, before removing fields
+# Write the DataFrame to the output CSV
+output_csv = 'bia_all_fields.csv'
+out_csv_path = os.path.join(output_folder, output_csv)
+out_csv = df.to_csv(out_csv_path, index=False)
 
 
 
 # Step 4: Check for fields in the DataFrame that are not in list1 and remove them
 fields_to_remove = [col for col in df.columns if col not in inForm_fields_all]
-print (f"fields to remove {fields_to_remove}")
-
-
 df.drop(columns=fields_to_remove, inplace=True)
 
 # Write the DataFrame to the output CSV
-output_csv = 'Alaska Output Final.csv'
+output_csv = 'bia_alaska_output.csv'
 out_csv_path = os.path.join(output_folder, output_csv)
 out_csv = df.to_csv(out_csv_path, index=False)
 
 # Now, df contains only the columns specified in list1
 print(df)
-

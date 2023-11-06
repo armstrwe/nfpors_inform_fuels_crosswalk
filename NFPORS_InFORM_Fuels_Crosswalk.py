@@ -1137,21 +1137,18 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
 #----------------------------------------------------------------------------------
 
 output_folder = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data output\10192023 BIA updates output'
-output_excel = 'output.xlsx'
+output_excel = 'output_gisTable_WORKING.xlsx'
 out_path = os.path.join(output_folder, output_excel)
+
+
+# Convert to excel to putput from GIS table
 
 # arcpy.TableToTable_conversion(gis_derivation_table_fullPath, r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data output', output_csv.csv)
 arcpy.conversion.TableToExcel(gis_derivation_table_fullPath, os.path.join(output_folder, out_path))
 
+# add excel back into dataframe 
+
 df = pd.read_excel(out_path)
-
-
-# output csv for qc, before removing fields
-# Write the DataFrame to the output CSV
-output_csv = 'bia_all_fields.csv'
-out_csv_path = os.path.join(output_folder, output_csv)
-out_csv = df.to_csv(out_csv_path, index=False)
-
 
 
 # Step 4: Check for fields in the DataFrame that are not in list1 and remove them
