@@ -15,7 +15,7 @@ from collections import Counter
 
 # Replace these file paths with your actual file paths
 # nfpors_table = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\Edited BIA_3year_data_for_Import_9_14_23 TESTING.xlsx'
-nfpors_table = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\10192023 BIA Updates\10182023 updated import.xlsx'
+nfpors_table = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\10042023 BIA Import\10 20 2023 Alaska Updates.xlsx'
 
 inform_table = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\InFormFuelsFeatureCsvExtract BIA.csv'
 
@@ -120,7 +120,11 @@ def read_spreadsheet_cols(file_path):
         print(column_name)
 
 #------------------------------------------------------------
-"""Columns to import from NFPORS spreadsheet"""
+# Columns to include in the dataframe. Make sure it matches the NFPORS table inputs/field mapping dictionary 
+
+
+# read_spreadsheet_cols(nfpors_table)
+# sys.exit()
 
 columns_to_include = [
     "ActivityTreatmentName",
@@ -193,17 +197,15 @@ dtype_specification = {
     
 }
 
-# Create dataframe
+# Read the input Excel file into a Pandas DataFrame with specified columns
+#df = pd.read_excel(nfpors_table, usecols=columns_to_include, dtype=dtype_specification)
 df = pd.read_excel(nfpors_table, usecols=columns_to_include)
 
 # Check if the DataFrame was successfully loaded
 if df is None:
-    print("Error: Unable to read NFPORS spreadsheet.")
+    print("Error: Unable to read the CSV file with any encoding.")
 
-
-""" 1st crosswalk from NFPORS field names to InFORM Fuels field names"""
-# These are fiels with 1-to-1 mapping. NFPORS name: InFORM name
-
+# Mapping from NFPORS table to InFORM Fuels table
 column_mapping = {
     "ActivityTreatmentName": "Name",
     "ActivityTreatmentID": "EstimatedTreatmentID",
@@ -246,12 +248,17 @@ column_mapping = {
 # Rename the columns in the DataFrame using the mapping
 df.rename(columns=column_mapping, inplace=True)
 
+# Handling input NFPORS fields that go to more than one InFORM Fuels field
+# copy the 1st reasigned column to a new column
+# df["EstimatedTotalCost"] = int(df["FundingSource"]) 
+#df['EstimatedTotalCost'] = df['FundingSource']
+#df['FundingSource'] = df['EstimatedTotalCost'].astype(str)
 df['FundingSource'] = ''
  # PlannedDirectCost -> FundingSource -> EstimatedTotalCost
 df["EstimatedActivityID"] = df["EstimatedTreatmentID"] # ActivityTreatmentID -> EstimatedTreatmentID -> EstimatedActivityID
 
 
-"""Entire list of InFORM Fuels fields"""
+# All InFORM Fuels columns
 
 inForm_fields_all = [
 "OBJECTID",
@@ -328,7 +335,6 @@ inForm_fields_all = [
 "VegDeparturePercentageDerived",
 "VegDeparturePercentageManual",
 "IsVegetationManual",
-"VegDeparture_Flag",
 "IsRtrl",
 "FundingSubUnit",
 "FundingUnitType",
@@ -425,7 +431,6 @@ inForm_nfpors_all = [
 "VegDeparturePercentageDerived",
 "VegDeparturePercentageManual",
 "IsVegetationManual",
-"VegDeparture_Flag",
 "IsRtrl",
 "FundingSubUnit",
 "FundingUnitType",
@@ -468,8 +473,45 @@ inForm_nfpors_all = [
 "PreTreatmentClass1",
 "PreTreatmentClass2",
 "PreTreatmentClass3",
+"VegDeparture_Flag"
 ]
 
+
+#  "BIL Estimated Personnel Cost",
+#     "BIL Estimated Asset Cost",
+#     "BIL Estimated Contractual Cost",
+#     "BIL Estimated Grants Fixed Costs",
+#     "BIL Estimated Other Cost",
+#     "Estimated Success Probability",
+#     "Implementation Feasibility",
+#     "Estimated Durability",
+#      # "EstimatedDurability"
+#     "Treatment Priority", 
+#     # "TreatmentPriority",
+#     "IsBil"
+
+# Fields to delete before saving to InFORM Fuels. 
+del_fields = [
+"ProjectLatitude",
+"ProjectLongitude",
+"AcresMonitored",
+"BILGeneralFunds",
+"BilThinningFunds",
+"BiLPrescribedFireFunds",
+"BiLControlLocationsFunds",
+"BilLaborersFunds",
+"GranteeCost",
+"ProjectNotes",
+"BILEstimatedPersonnelCost",
+"BILEstimatedAssetCost",
+"BILEstimatedContractualCost",
+"BILEstimatedGrantsFixedCosts",
+"BILEstimatedOtherCost",
+# "EstimatedSuccessProbability",
+"ImplementationFeasibility",
+"EstimatedDurability",  
+"TreatmentPriority"
+]
 
 # Iterate over the list of columns to check if they exist in the DataFrame
 for column_name in inForm_nfpors_all:
@@ -679,6 +721,11 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, update_fields) as curs
             row[6] = 0
             row[17] = 1
 
+        # print(f"class {Class.lower()}, category {category.lower()}")
+        # if Class.rstrip().lower() == "activity" and category.lower().rstrip() == "program management":
+        #     #print(f"class {Class}, category {category}")
+        #     row[6] = 0
+        #     row[17] = 1
 
         # If "PlannedDirectCost" (converted to "FundingSource") >= 1, look through "BILGeneralFunds","BILThinningFunds",	
         # "BILPrescribedFireFunds","BILControlLocationsFunds","BILLaborersFunds", for funding source. Else leave as is.
@@ -910,256 +957,271 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
 
 # Extract raster Veg Departure Values to Points 
 
-def vdep(layer):
+# def vdep(layer):
 
-    arcpy.sa.ExtractValuesToPoints(Indexed_Points, layer, "vegDp_extract", interpolate_values="NONE", add_attributes="VALUE_ONLY")
+#     arcpy.sa.ExtractValuesToPoints(Indexed_Points, layer, "vegDp_extract", interpolate_values="NONE", add_attributes="VALUE_ONLY")
 
-    print (f"Calculating Vegetation Departure for Landfire: {layer}")
-    # describe("vegDp_extract")
-
-
-    # Only calculate veg dep if there are points in the layer
-    # Use GetCount_management to count the features
-    # result = arcpy.GetCount_management("vegDp_extract")
-
-    # # Get the count as an integer
-    # count = int(result.getOutput(0))
+#     print (f"Calculating Vegetation Departure for Landfire: {layer}")
+#     # describe("vegDp_extract")
 
 
+#     # Only calculate veg dep if there are points in the layer
+#     # Use GetCount_management to count the features
+#     # result = arcpy.GetCount_management("vegDp_extract")
 
-    # Initialize an empty dictionary
-    vegDep_dict = {}
+#     # # Get the count as an integer
+#     # count = int(result.getOutput(0))
 
-    # Spatial Join Congressional District fields
-    fields = ["GUID", "RASTERVALU"]
 
-    # Use a search cursor to iterate through the data and populate the dictionary
-    with arcpy.da.SearchCursor("vegDp_extract", fields) as cursor:
-        for row in cursor:
-            guid = row[0] 
-            vd = row[1]
-            val_list = [vd]
-            vegDep_dict[guid] = val_list
 
-    # InFORM Fuels fields
-    fields = ["GUID", "VegDeparturePercentageDerived"]
+#     # Initialize an empty dictionary
+#     vegDep_dict = {}
 
-    with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
-        for row in cursor:
-            guid = row[0]
-            if guid in vegDep_dict:
-                row[1] = vegDep_dict[guid][0]
+#     # Spatial Join Congressional District fields
+#     fields = ["GUID", "RASTERVALU"]
+
+#     # Use a search cursor to iterate through the data and populate the dictionary
+#     with arcpy.da.SearchCursor("vegDp_extract", fields) as cursor:
+#         for row in cursor:
+#             guid = row[0] 
+#             vd = row[1]
+#             val_list = [vd]
+#             vegDep_dict[guid] = val_list
+
+#     # InFORM Fuels fields
+#     fields = ["GUID", "VegDeparturePercentageDerived"]
+
+#     with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
+#         for row in cursor:
+#             guid = row[0]
+#             if guid in vegDep_dict:
+#                 row[1] = vegDep_dict[guid][0]
            
-            # Update the feature with the new values
+#             # Update the feature with the new values
             
-            if row[1] is not None:
-                cursor.updateRow(row)
+#             if row[1] is not None:
+#                 cursor.updateRow(row)
 
-    with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
-        for row in cursor:
-            print(f"veg dep {row[1]}")
+#     with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
+#         for row in cursor:
+#             print(f"veg dep {row[1]}")
 
 
-# run vegetation departure derivation on US Veg Departure and HI Veg Departure
-# veg_departure_layers = [us_vegDep, hi_vegDep]
+# # run vegetation departure derivation on US Veg Departure and HI Veg Departure
+# # veg_departure_layers = [us_vegDep, hi_vegDep]
 
-# run vegetation departure derivation on US Veg Departure and HI Veg Departure
-veg_departure_layers = [us_vegDep]
+# # run vegetation departure derivation on US Veg Departure and HI Veg Departure
+# veg_departure_layers = [us_vegDep]
 
-for layer in veg_departure_layers:
-    vdep(layer)
+# for layer in veg_departure_layers:
+#     vdep(layer)
 
 #------------------------------------------------------------------------------------------------
 # Vegetation Depatrure > 100 flag
-# reclassify values > 100
 
-fields= ["VegDeparturePercentageDerived", "VegDeparture_Flag"]
+# fields= ["VegDeparturePercentageDerived", "VegDeparture_Flag"]
 
-with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
-        for row in cursor:
-            vd = row[0]
-            
-            if vd is not None and int(vd) >= 100:
-                
-                vd_int = int(vd)
-                # Set flag
-                row[1] = 1
-                # Water/Snow/Ice reclass
-                if vd_int == 111 or vd_int == 112:
-                    row[0] = 32
-                # Developed reclass
-                if vd_int == 120:
-                    row[0] = 80
-                # Barren/Sparse reclass
-                if vd_int == 132:
-                    row[0] = 56
-                # Agriculture reclass
-                if vd_int == 180:
-                    row[0] = 68
-            # Blank reclass
-            elif vd is None or vd == "":
-                row[0] = 50
-
-            cursor.updateRow(row)
+# with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
+#         for row in cursor:
+#             vd = row[0]
+#             if vd is not None and float(vd) >= 100:
+#                 row[1] = 1
+#             cursor.updateRow(row)
 #-------------------------------------------------------------------------------------------------
 
 # Tribe Name and BIA Agency Derivation
 # describe(tribal_leaders)
 
-# tribal leaders dictionary. Key = Tribe Full Name. Value = BIA Agency 
-tribal_leaders_dict = {}
+# # tribal leaders dictionary. Key = Tribe Full Name. Value = BIA Agency 
+# tribal_leaders_dict = {}
 
-fields = ["TribeFullName", "BIAAgency"]
+# fields = ["TribeFullName", "BIAAgency"]
 
-# Use a search cursor to iterate through the data and populate the dictionary
-with arcpy.da.SearchCursor(tribal_leaders, fields) as cursor:
-    for row in cursor:
-        tname = row[0] 
-        agency = row[1]
-        val_list = [agency]
-        tribal_leaders_dict[tname] = val_list
-
-
-# Spatial join points with Tribal Polygons 
-arcpy.analysis.SpatialJoin(Indexed_Points, tribe_name, "tribes_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="", match_option="INTERSECT", search_radius="", distance_field_name="")
-
-# create a dictionary from tribal polygons spatially joined to points. Key = Guid, tribe full name, tribe short name. Some points have no tribes
-# Initialize an empty dictionary
-tr_name_dict = {}
-
-# "TRIBE NAME" = full tribe name"NAME_1" is the abbreviated tribe name. 
-fields = ["GUID", "TRIBE_NAME","NAME_1"]
-
-# Use a search cursor to iterate through the data and populate the dictionary
-with arcpy.da.SearchCursor("tribes_sj", fields) as cursor:
-    for row in cursor:
-        guid = row[0] 
-        tribe_full_name = row[1]
-        tribe_short_name = row[2]
-        val_list = [tribe_full_name, tribe_short_name]
-        tr_name_dict[guid] = val_list
-
-#------------------------------------------------------------
+# # Use a search cursor to iterate through the data and populate the dictionary
+# with arcpy.da.SearchCursor(tribal_leaders, fields) as cursor:
+#     for row in cursor:
+#         tname = row[0] 
+#         agency = row[1]
+#         val_list = [agency]
+#         tribal_leaders_dict[tname] = val_list
 
 
-# InFORM Fuels fields
-fields = ["GUID", "TribeName", "Unit", "FundingUnit"]
-with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
-    for row in cursor:
-        guid = row[0]
+# # Spatial join points with Tribal Polygons 
+# arcpy.analysis.SpatialJoin(Indexed_Points, tribe_name, "tribes_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="", match_option="INTERSECT", search_radius="", distance_field_name="")
 
-        # should have all guids in tr_name_dict (created from SJ)
-        if guid in tr_name_dict:
-            
-            # set tribe name to full name
-            row[1] = tr_name_dict[guid][0]
-            # row[4] = tr_name_dict[guid][0]
+# # create a dictionary from tribal polygons spatially joined to points. Key = Guid, tribe full name, tribe short name. Some points have no tribes
+# # Initialize an empty dictionary
+# tr_name_dict = {}
 
-        # Update the feature with the new values
-        cursor.updateRow(row)
+# # "TRIBE NAME" = full tribe name"NAME_1" is the abbreviated tribe name. 
+# fields = ["GUID", "TRIBE_NAME","NAME_1"]
 
-#--------------------638 Tribes-------------------------
+# # Use a search cursor to iterate through the data and populate the dictionary
+# with arcpy.da.SearchCursor("tribes_sj", fields) as cursor:
+#     for row in cursor:
+#         guid = row[0] 
+#         tribe_full_name = row[1]
+#         tribe_short_name = row[2]
+#         val_list = [tribe_full_name, tribe_short_name]
+#         tr_name_dict[guid] = val_list
 
-# Create a list of all of the unique tribes in the NFPORS data
-# these will be any values in NFPORS "Units" that contain the word "Tribe or Tribes"
-# These tribes will be used to calculate values for the 638 tribes
-# The 638 tribes will have their location Unit set to the Tribal Leader BIA Agency
-# The 638 tribes will have their Funding Unit set to the Tribal Leader BIA Agency
-# Need to match the Tribe name from NFPORS to the Tribal Leader name
-# Funding tribe will be set to tribe name 
+# #------------------------------------------------------------
 
+# # # Loop through the table 
+# # fields = ["GUID", "TribeName", "Unit", "FundingUnit"]
 
-# Find all unique tribe Names in the NFPORS data
-
-# this list will be used to link back to InFORM Fuels
-uniqueTribes = []
-all_units = []
-
-# using "Funding Unit" as the field to search for tribes, because it was populated with NFPORS Units
-fields = ["FundingUnit"]
-
-with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
-    for row in cursor:
-        unitVal = row[0] 
-        if unitVal not in all_units:
-            all_units.append(unitVal)
-
-for t in all_units:
-    t_lower = t.rstrip().lower()
-    if "tribe" in t_lower:
-        uniqueTribes.append(t)
-
-# Remove "Tribe" from each string in the list
-for t in uniqueTribes:
-    if "Tribes" in t:
-        t.replace("Tribes", "")
-    elif "Tribe" in t:
-        t.replace("Tribe", "")
-
-
-# list of tribes modified for searching in the tribal leaders dictionary
-# TribeLookup_list = [string.replace("Tribes", "").replace("Tribe", "").replace("&", "and") for string in uniqueTribes]
-
-# list with tribe for search, and from NFPORS 
-TribeLookup_list = []
-
-for tribe in uniqueTribes:
-    tribe_strip = tribe.replace("Tribes", "").replace("Tribe", "").replace("&", "and")
-    tribes = [tribe_strip, tribe]
-    TribeLookup_list.append(tribes)
-
-
-for t in TribeLookup_list:
-     print (t)
-
-
-tribal_638_dict = {}
-
-for key, value in tribal_leaders_dict.items():
-    for all in TribeLookup_list:
-
-        # tribe name cleaned
-        t=all[0]
-        # Nfpors name
-        n=all[1]
-        # Remove spaces and hyphens from both the search string and the key
-        t_cleaned = re.sub(r'[-\s]', '', t.rstrip())
-        key_cleaned = re.sub(r'[-\s]', '', key.rstrip())
+# # with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
+# #     for row in cursor:
         
-        t_pattern = re.compile(re.escape(t_cleaned), re.IGNORECASE)
-        if t_pattern.search(key_cleaned):
-            # print(f"{t} is in {key}")
-            val_list = [value[0], n]
-            tribal_638_dict[key] = val_list
-        # else:
-        #     del tribal_leaders_dict[key]
+# #         # guid for lookup
+# #         guid = row[0] 
 
-print (f"\n\n")
-# for key, value in tribal_638_dict.items():
-#     print(f"{key}: {value}")
+# #         # get full name from dictionary
+# #         tribe_name_full = tr_name_dict[guid][0]
 
-# find 638 tribes in table, update Location Unit, Funding Unit, with BIA Agency
+# #         # get short name from dictionary
+# #         tribe_name_short = tr_name_dict[guid][1]
+   
+#         # check if tribe name in tribal leaders dict
+        
 
-# Loop through the table 
-fields = ["GUID", "TribeName", "Unit", "FundingUnit", "FundingTribe"]
+#         # If tribe name (long or short) in Tribal Leaders
+#         # Overwrite Unit with BIA Agency from Tribal Leaders
+
+#         # key = Tribe Full Name, Value = BIA Agency
+#         # for key, value in tribal_leaders_dict.items():
+#             # # print(f"key: {key}, value: {value}")
+
+#             # # check for tribe full name from spatial join in full name of tribal leaders
+#             # if tribe_name_full is not None and tribe_name_full.rstrip().lower() in key.rstrip().lower():
+#             #     print (f"Match found: {key}: {value}")
+
+#             #     # If match is found, the Unit value in the table gets set to the BIA Agency from Tribal Leaders
+#             #     row[2] = value[0]
+#             #     row[3] = value[0]
+#             #     break
+            
+#             # # If tribe full name not found check for tribe short name from spatial join in full name of tribal leaders
+#             # elif tribe_name_short is not None and tribe_name_short.rstrip().lower() in key.rstrip().lower():
+#             #     print (f"Match found: {key}: {value}")
+
+#             #     # If match is found, the Unit value in the table gets set to the BIA Agency from Tribal Leaders
+#             #     row[2] = value[0]
+#             #     row[3] = value[0]
+#             #     break   
+
+#         # cursor.updateRow(row)
+
+# # InFORM Fuels fields
+# fields = ["GUID", "TribeName", "Unit", "FundingUnit", "FundingTribe"]
+# with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
+#     for row in cursor:
+#         guid = row[0]
+
+#         # should have all guids in tr_name_dict (created from SJ)
+#         if guid in tr_name_dict:
+            
+#             # set tribe name to full name
+#             row[1] = tr_name_dict[guid][0]
+#             row[4] = tr_name_dict[guid][0]
+
+#         # Update the feature with the new values
+#         cursor.updateRow(row)
+
+# #--------------------638 Tribes-------------------------
+
+# # Create a list of all of the unique tribes in the NFPORS data
+# # these will be any values in NFPORS "Units" that contain the word "Tribe or Tribes"
+# # These tribes will be used to calculate values for the 638 tribes
+# # The 638 tribes will have their location Unit set to the Tribal Leader BIA Agency
+# # The 638 tribes will have their Funding Unit set to the Tribal Leader BIA Agency
+# # Need to match the Tribe name from NFPORS to the Tribal Leader name
 
 
-final_list = []
+# # Find all unique tribe Names in the NFPORS data
 
-with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
-    for row in cursor:
-        for v in tribal_638_dict:
-            if tribal_638_dict[v][1] == row[3]:
-                print(f"Match found Tribe name: {row[1]} and funding unit: {row[3]} and BIA Agency = {tribal_638_dict[v][0]} ")
-                row[2] = tribal_638_dict[v][0]
-                row[3] = tribal_638_dict[v][0]
-                row[4] = row[1]
+# # this list will be used to link back to InFORM Fuels
+# uniqueTribes = []
+# all_units = []
 
-            # updates the location unit and funding unit with the BIA Agency
-            cursor.updateRow(row)
+# # using "Funding Unit" as the field to search for tribes, because it was populated with NFPORS Units
+# fields = ["FundingUnit"]
+
+# with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
+#     for row in cursor:
+#         unitVal = row[0] 
+#         if unitVal not in all_units:
+#             all_units.append(unitVal)
+
+# for t in all_units:
+#     t_lower = t.rstrip().lower()
+#     if "tribe" in t_lower:
+#         uniqueTribes.append(t)
+
+# # Remove "Tribe" from each string in the list
+# for t in uniqueTribes:
+#     if "Tribes" in t:
+#         t.replace("Tribes", "")
+#     elif "Tribe" in t:
+#         t.replace("Tribe", "")
 
 
+# # list of tribes modified for searching in the tribal leaders dictionary
+# # TribeLookup_list = [string.replace("Tribes", "").replace("Tribe", "").replace("&", "and") for string in uniqueTribes]
 
+# # list with tribe for search, and from NFPORS 
+# TribeLookup_list = []
+
+# for tribe in uniqueTribes:
+#     tribe_strip = tribe.replace("Tribes", "").replace("Tribe", "").replace("&", "and")
+#     tribes = [tribe_strip, tribe]
+#     TribeLookup_list.append(tribes)
+
+
+# for t in TribeLookup_list:
+#      print (t)
+
+
+# tribal_638_dict = {}
+
+# for key, value in tribal_leaders_dict.items():
+#     for all in TribeLookup_list:
+
+#         # tribe name cleaned
+#         t=all[0]
+#         # Nfpors name
+#         n=all[1]
+#         # Remove spaces and hyphens from both the search string and the key
+#         t_cleaned = re.sub(r'[-\s]', '', t.rstrip())
+#         key_cleaned = re.sub(r'[-\s]', '', key.rstrip())
+        
+#         t_pattern = re.compile(re.escape(t_cleaned), re.IGNORECASE)
+#         if t_pattern.search(key_cleaned):
+#             # print(f"{t} is in {key}")
+#             val_list = [value[0], n]
+#             tribal_638_dict[key] = val_list
+#         # else:
+#         #     del tribal_leaders_dict[key]
+
+# print (f"\n\n")
+# # for key, value in tribal_638_dict.items():
+# #     print(f"{key}: {value}")
+
+# # find 638 tribes in table, update Location Unit, Funding Unit, with BIA Agency
+
+# # Loop through the table 
+# fields = ["GUID", "TribeName", "Unit", "FundingUnit"]
+
+# with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
+#     for row in cursor:
+#         for v in tribal_638_dict:
+#             if tribal_638_dict[v][1] == row[3]:
+#                 print(f"Match found Tribe name: {row[1]} and funding unit: {row[3]} and BIA Agency = {tribal_638_dict[v][0]} ")
+#                 row[2] = tribal_638_dict[v][0]
+#                 row[3] = tribal_638_dict[v][0]
+
+#             # updates the location unit and funding unit with the BIA Agency
+#             cursor.updateRow(row)
 
 #----------------------------------------------------------------------------------
 
@@ -1183,7 +1245,7 @@ fields_to_remove = [col for col in df.columns if col not in inForm_fields_all]
 df.drop(columns=fields_to_remove, inplace=True)
 
 # Write the DataFrame to the output CSV
-output_csv = 'output_final.csv'
+output_csv = 'output_final_Alaska.csv'
 out_csv_path = os.path.join(output_folder, output_csv)
 out_csv = df.to_csv(out_csv_path, index=False)
 
