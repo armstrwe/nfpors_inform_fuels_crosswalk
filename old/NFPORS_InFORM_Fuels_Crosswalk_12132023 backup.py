@@ -50,11 +50,6 @@ def user_inputs():
     b_name = ""
     ak_true = "N"
 
-    # Datetime formatting check
-    dt_prompt = "Input spreadsheet date time fields formatted correctly? (y/n) "
-    dt_response = input(dt_prompt)
-
-
     def get_yes_no_input(prompt):
         """Function to get a 'y' or 'n' input from the user."""
         while True:
@@ -360,14 +355,14 @@ output_folder = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFO
 out_name_raw = '11282023 BIA Output'
 
 # Output file for temp CSV
-temp_table1 = os.path.join(output_folder, out_name_raw + '_temp_CSV.csv')
+temp_table1 = os.path.join(output_folder, out_name_raw + 'tempCSV.csv')
 
 # output_file for temp excel
-temp_table2 = os.path.join(output_folder, out_name_raw + '_temp_XLS.xls')
+temp_table2 = os.path.join(output_folder, out_name_raw + 'tempXLS.xls')
 
 # Final output csv
 output_csv = 'FWS_FY23_carryover_for_IFPRS_import_Final.csv'
-out_csv_path = os.path.join(output_folder, output_csv + ".csv")
+out_csv_path = os.path.join(output_folder, out_name_raw + ".csv")
 
 
 # Input file gdb for geoprocessing 
@@ -413,12 +408,6 @@ bia_regions = r'C:\Users\warmstrong\Documents\Data\Bureau Regions\data.gdb\bia_r
 fws_regions = r'C:\Users\warmstrong\Documents\Data\Bureau Regions\data.gdb\fws_regions'
 nps_regions = "XXXX"
 blm_regions = "XXXX"
-
-
-# BLM Field Unit
-
-# BLM Other Unit
-
 
 # Congressional Districts
 con_districts = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\USA_118th_Congressional_Districts.gdb\56f52086-3918-488c-b058-92bc23d4d20a.gdb\USA_118th_Congressional_Districts'
@@ -514,7 +503,7 @@ arcpy.TableToTable_conversion(in_rows=temp_table1, out_path=gdb_path, out_name=g
 # full path to output table
 gis_derivation_table_fullPath = f'{gdb_path}\\{gis_derivation_table}'
 
-# verify_fields = describe(gis_derivation_table_fullPath)
+verify_fields = describe(gis_derivation_table_fullPath)
 
 
 #------------------------------------------------------------------------------------------------------------------------------
@@ -625,9 +614,9 @@ update_fields = [
     "IsBIL"     # [33]
 ]
 
-# for f in update_fields:
-#    if f not in verify_fields:
-#        print (f"field {f} not in table...")
+for f in update_fields:
+    if f not in verify_fields:
+        print (f"field {f} not in table...")
 
 
 
@@ -962,6 +951,8 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
 
 # Vegetation Departure Derivation
 
+
+
 def vdep(L48_layer, HI_layer):
 
     # run VDEP derivation on US Veg Departure (raster), then HI Veg Departure (polygon)
@@ -969,7 +960,7 @@ def vdep(L48_layer, HI_layer):
     # Extract raster Veg Departure Values to Points
     arcpy.sa.ExtractValuesToPoints(Indexed_Points, L48_layer, "vegDp_extract", interpolate_values="NONE", add_attributes="VALUE_ONLY")
 
-    print (f"Calculating Vegetation Departure for Lower 48 States")
+    print (f"Calculating Vegetation Departure for Landfire: {L48_layer}")
     # describe("vegDp_extract")
 
     # Initialize an empty dictionary
@@ -999,60 +990,31 @@ def vdep(L48_layer, HI_layer):
             if row[1] is not None:
                 cursor.updateRow(row)
 
-    del cursor
-    del row
-
-    # with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
-        # for row in cursor:
-            # print(f"veg dep {row[1]}")
+    with arcpy.da.SearchCursor(gis_derivation_table_fullPath, fields) as cursor:
+        for row in cursor:
+            print(f"veg dep {row[1]}")
 
     # Calculate Hawaii Veg Departure
-    print (f"Checking for Hawaii")
-    
-    arcpy.management.MakeFeatureLayer(Indexed_Points, "HI_layer")
-    HI_query = "State LIKE '%Haw%'"
-    # HI_query = "State = 'Hawaii'"
+
+    HI_query = "state LIKE '%Haw%'"
+
     # Select points in Hawaii
-    arcpy.management.SelectLayerByAttribute("HI_layer", "NEW_SELECTION", HI_query)
+    arcpy.management.SelectLayerByAttribute(Indexed_Points, "NEW_SELECTION", HI_query)
 
-    Hawaii_count = int(str(arcpy.management.GetCount("HI_layer")))
-    
-    # Hawaii points found, run derivation
-    if Hawaii_count > 0:
 
-        print (f"Calculating Vegetation Departure for Hawaii")
+    fields = ["ProjectNotes"]
+    with arcpy.da.UpdateCursor(Indexed_Points, fields) as cursor:
+        for row in cursor:
+            row[0] = "Hawaii Veg Departure Found"
+            cursor.updateRow(row)
 
-        # Spatial Join Hawaii Veg Departure to Points if Count > 0
-        arcpy.analysis.SpatialJoin("HI_layer", hi_vegDep, "HI_SJ", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="GUID \"GUID\" true true false 8000 Text 0 0,First,#,InFormFuelsFeatureCsvExtract_Points,GUID,0,8000;Id \"Id\" true true false 4 Long 0 0,First,#,HI_220VDEP_poly,Id,-1,-1;gridcode \"gridcode\" true true false 4 Long 0 0,First,#,HI_220VDEP_poly,gridcode,-1,-1;Shape_Length \"Shape_Length\" false true true 8 Double 0 0,First,#,HI_220VDEP_poly,Shape_Length,-1,-1;Shape_Area \"Shape_Area\" false true true 8 Double 0 0,First,#,HI_220VDEP_poly,Shape_Area,-1,-1", match_option="INTERSECT", search_radius="", distance_field_name="")
 
-        hi_dict = {}
-        fields = ["GUID", "gridcode"]
-
-        # Use a search cursor to iterate through the data and populate the dictionary
-        with arcpy.da.SearchCursor("HI_SJ", fields) as cursor:
-            for row in cursor:
-                guid = row[0] 
-                vdep_val = row[1]
-                hi_dict[guid] = vdep_val
-
-        # InFORM Fuels fields
-        fields = ["GUID", "VegDeparturePercentageDerived"]
-        with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
-            for row in cursor:
-                guid = row[0]
-                if guid in hi_dict:
-                    row[1] = hi_dict[guid]
-            
-                # Update the feature with the new values
-                cursor.updateRow(row)
-        del cursor
-        del row
 
 # run vegetation departure derivation on US Veg Departure and HI Veg Departure
 # veg_departure_layers = [us_vegDep, hi_vegDep]
 
 # only run veg dep derivation if not Alaska
-if is_alaska.upper() == "N":
+if is_alaska == "n":
 
     print (f"Vegetation Departure derivations...")
 
@@ -1061,25 +1023,13 @@ if is_alaska.upper() == "N":
 
     #for layer in veg_departure_layers:
         
-    vdep (us_vegDep, hi_vegDep)
+    vdep (us_vegDep)
 
 
     # Vegetation Depatrure > 100 flag
     # reclassify values > 100
 
     fields= ["VegDeparturePercentageDerived", "VegDeparture_Flag"]
-
-
-
-    # with arcpy.da.SearcUpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
-
-    #         for row in cursor:
-                
-    #             print(f"veg dep {row[0]}")
-    #             row[1]= 1
-    #             cursor.updateRow(row)
-    # sys.exit()
-
 
     with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
             for row in cursor:
@@ -1106,7 +1056,7 @@ if is_alaska.upper() == "N":
                 elif vd is None or vd == "":
                     row[0] = 50
 
-                cursor.updateRow(row)
+            cursor.updateRow(row)
 #------------------------------------------------------------------------------------------------------------------------------
 
 # Tribe Name and BIA Agency Derivation
