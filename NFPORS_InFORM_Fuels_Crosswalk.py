@@ -76,38 +76,18 @@ def user_inputs():
     return b_name, ak_true
 
 
-# return region layer and field name based on bureau
-def regions(bureau_abbv, bia_path, fws_path):
-    bia = bia_path      
-    fws = fws_path
-
-
-    # return the path to the region layer and the field name for the region
+# return region field name based on bureau abbreviation  
+def regions(bureau_abbv):
+   
     if bureau_abbv == "BIA":
-        return bia, "XXXXX"
-    elif bureau_abbv == "FWS":
-        return fws, "REGNAME"
- 
+        return "REGIONNAME"
+    if bureau_abbv == "FWS":
+        return "REGNAME"
+    if bureau_abbv == "NPS":
+        return "XXXX"
+    if bureau_abbv == "BLM":
+        return "ADMIN_ST"
     
-# def regions(bureau_abbv, bia_path, fws_path, nps_path, blm_path):
-#     bia = bia_path      
-#     fws = fws_path
-#     nps = nps_path
-#     blm = blm_path
-
-#     # return the path to the region layer and the field name for the region
-#     if bureau_abbv == "BIA":
-#         return bia, "XXXXX"
-#     if bureau_abbv == "FWS":
-#         return fws, "REGNAME"
-#     if bureau_abbv == "NPS":
-#         return nps, "XXXX"
-#     if bureau_abbv == "BLM":
-#         return blm, "XXXX"
-    
-
-
-
 
 #------------------------------------------------------------------------------------------------------------------------------
 
@@ -168,7 +148,7 @@ class FieldMapping:
             "Implementation Feasibility",
             "Estimated Durability",
             "Treatment Priority", 
-            "IsBil",
+            "IsBil", 
             "IsRtrl",
             "ProjectIsRtrl",
             "FireRegime",
@@ -177,6 +157,25 @@ class FieldMapping:
             "PreTreatmentClass3"
             
             ]
+
+
+            # BLM Specific fields to import from the NFPORS spreadsheet
+        self.BLM_nfpors_fields_Import = [
+
+            "NonNFPSameBureauFunds",
+            "NFPSameBureau",
+            "NonNFPOtherDOIBureauFunds",
+            "NFPOtherDOIBureauFunds",
+            "OtherFederalDepartmentFunds",
+            "StateLocalPrivateFunds",
+            "NonGovernmentalOrganizationFunds",
+            "TribalFunds",
+            "SageGrouseFlag",
+            "FundingRegion",
+            "FundingUnit",
+            "FundingSubUnit"
+
+        ]
         
         # Inform Fuels and Post Fire fields 
         self.inform_fields = [
@@ -318,6 +317,18 @@ class FieldMapping:
             "BILFunding":"BILFunding"
             }
 
+
+
+        self.BLM.infpors_inform_map = [
+
+            "SageGrouseFlag": "SageGrouseFlag",
+            "FundingRegion": "FundingRegion",
+            "FundingUnit": "FundingUnit",
+            "FundingSubUnit": "FundingSubUnit"`
+
+        ]
+
+
     def get_lists(self):
         return self.nfpors_fields_Import, self.inform_fields
 
@@ -338,11 +349,9 @@ class FieldMapping:
 
         return l5
 
-
 #------------------------------------------------------------------------------------------------------------------------------
 
 # Setup
-
 
 # get user input for agency, Alaska
 in_bureau, is_alaska = user_inputs()
@@ -351,13 +360,13 @@ print(f"Agency: {in_bureau}, Alaska: {is_alaska}")
 print (f"Setting up...")
 
 # Input NFPORS spreadsheet
-nfpors_table = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\12122023 FWS Carryover\FWS_FY23_carryover_RAW_for_import.xlsx'
+nfpors_table = r'C:\Users\warmstrong\OneDrive - DOI\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\2024 01 30 testing\FWS\input\FWS_FY23_carryover_for_IFPRS_import.xlsx'
 
 # folder for output 
-output_folder = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data output\12122023 FWS Carryover'
+output_folder = r'C:\Users\warmstrong\OneDrive - DOI\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\2024 01 30 testing\FWS\output'
 
 # file name for outputs, no extension
-out_name_raw = '11282023 BIA Output'
+out_name_raw = '2024 01 30 FWS Output'
 
 # Output file for temp CSV
 temp_table1 = os.path.join(output_folder, out_name_raw + '_temp_CSV.csv')
@@ -369,9 +378,8 @@ temp_table2 = os.path.join(output_folder, out_name_raw + '_temp_XLS.xls')
 output_csv = 'FWS_FY23_carryover_for_IFPRS_import_Final.csv'
 out_csv_path = os.path.join(output_folder, output_csv + ".csv")
 
-
 # Input file gdb for geoprocessing 
-gdb_path = r"C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\data.gdb"
+gdb_path = r"C:\Users\warmstrong\OneDrive - DOI\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\data input\data.gdb"
 
 # Check if the file geodatabase exists
 if arcpy.Exists(gdb_path):
@@ -381,7 +389,7 @@ if arcpy.Exists(gdb_path):
 # Create a new file geodatabase
 arcpy.CreateFileGDB_management(os.path.dirname(gdb_path), os.path.basename(gdb_path))
 
-# Set the workspace to your file geodatabase
+# Set the workspace to file geodatabase
 arcpy.env.workspace = gdb_path  
 
 # enable overwriting
@@ -391,47 +399,47 @@ arcpy.env.overwriteOutput = True
 
 # Derivation layers
 
-# IF ANY LAYERS ARE CHANGED - NEED TO VERIFY THE FIELDS IN THE DERIVATION SECTION BELOW
+# IF ANY LAYERS ARE CHANGED - NEED TO VERIFY THE FIELDS IN THE DERIVATIONS
 
 # WFDSS Jurisdictional Agency
-WFDSS_Jurisdictional_Agency = r'C:\Users\warmstrong\Documents\Data\Jurisdictional\07272023 Jurisdictional_Unit_(Public).gdb\470746db-06af-4720-b20a-e530856939c7.gdb\WFDSS_Jurisdictional_Agency'
+WFDSS_Jurisdictional_Agency = r'C:\Users\warmstrong\OneDrive - DOI\Documents\Data\Jurisdictional\IFPRS_Crosswalk\Jurisdictional_Unit_(Public).gdb\470746db-06af-4720-b20a-e530856939c7.gdb\WFDSS_Jurisdictional_Agency'
 
 # Tribe Name
-tribe_name = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\data.gdb\TribeName_allFields'
+tribe_name = r'C:\Users\warmstrong\OneDrive - DOI\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\data.gdb\TribeName_allFields'
 
 # Tribal Leaders
-tribal_leaders = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\data.gdb\Tribal_Leaders_table'
+tribal_leaders = r'C:\Users\warmstrong\OneDrive - DOI\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\data.gdb\Tribal_Leaders_table'
 
 # State
-states = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\data.gdb\States'
+states = r'C:\Users\warmstrong\OneDrive - DOI\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\data.gdb\States'
 
 # County
-county = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\data.gdb\CountyName'
+county = r'C:\Users\warmstrong\OneDrive - DOI\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\data.gdb\CountyName'
 
 # Regions 
-bia_regions = r'C:\Users\warmstrong\Documents\Data\Bureau Regions\data.gdb\bia_regions'
-fws_regions = r'C:\Users\warmstrong\Documents\Data\Bureau Regions\data.gdb\fws_regions'
+bia_regions = r'C:\Users\warmstrong\OneDrive - DOI\Documents\Data\Bureau Regions\data.gdb\bia_regions'
+fws_regions = r'C:\Users\warmstrong\OneDrive - DOI\Documents\Data\Bureau Regions\data.gdb\fws_regions'
 nps_regions = "XXXX"
-blm_regions = "XXXX"
+blm_regions = r'C:\Users\warmstrong\Documents\Data\BLM\BLM_National_Administrative_Unit_B_v1.gdb\BLM_National_Administrative_Unit_B.gdb\blm_natl_admu_poly_webpub\blm_natl_admu_state_poly_webpub'
 
 
 # BLM Field Unit
+blm_field_offices = r'C:\Users\warmstrong\Documents\Data\BLM\BLM_National_Administrative_Unit_B.gdb\BLM_National_Administrative_Unit_B.gdb\blm_natl_admu_field_poly_webpub_1'
 
 # BLM Other Unit
-
+blm_other = r'C:\Users\warmstrong\Documents\Data\BLM\BLM_National_Administrative_Unit_B.gdb\BLM_National_Administrative_Unit_B.gdb\blm_natl_admu_other_poly_webpub_1'
 
 # Congressional Districts
-con_districts = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\USA_118th_Congressional_Districts.gdb\56f52086-3918-488c-b058-92bc23d4d20a.gdb\USA_118th_Congressional_Districts'
+con_districts = r'C:\Users\warmstrong\OneDrive - DOI\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\USA_118th_Congressional_Districts.gdb\56f52086-3918-488c-b058-92bc23d4d20a.gdb\USA_118th_Congressional_Districts'
 
 # US Veg Departure (no Alaska) (raster)
-us_vegDep = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\BIA Crosswalk\US_220VDEP_150m.tif'
+us_vegDep = r'C:\Users\warmstrong\OneDrive - DOI\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\BIA Crosswalk\US_220VDEP_150m.tif'
 
 # Hawai Veg Departure (polygon)
-hi_vegDep = r'C:\Users\warmstrong\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\data.gdb\HI_220VDEP_poly'
+hi_vegDep = r'C:\Users\warmstrong\OneDrive - DOI\Documents\work\InFORM\20230912 NFPORS InFORM Crosswalk Script\spatial layers\data.gdb\HI_220VDEP_poly'
 
 # US Veg Deperature Index 
 us_vegIndex = r''
-
 
 #------------------------------------------------------------------------------------------------------------------------------
 
@@ -440,11 +448,23 @@ fmap = FieldMapping()
 
 print (f"Beginning data crosswalk...")
 
-"""Columns to import from NFPORS spreadsheet"""
+#--------------------------------------------------------------------------------
 
-# get columns to import from field mapping class
+# Add BLM logic here
+
+# NFPORS fields to import
 columns_to_include = fmap.nfpors_fields_Import
+
+# NFPORS to InFORM Fuels field mapping
+column_mapping = fmap.nfpors_inform_map
+
+# All inForm Fuels fields
+inForm_fields_all = fmap.inform_fields
+
+# InFORM and NFPORS fields for ordering and testing 
+inForm_nfpors_all = fmap.inform_nfpors_ordered
     
+#--------------------------------------------------------------------------------
 
 # Specify the data type for lat / long. Convert to string. 
 dtype_specification = {
@@ -467,8 +487,7 @@ if df is None:
 """1st crosswalk from NFPORS field names to InFORM Fuels field names"""
 # These are fiels with 1-to-1 mapping. NFPORS name: InFORM name
 
-# Get the column mapping from the field mapping class
-column_mapping = fmap.nfpors_inform_map
+
 
 # Rename the columns in the DataFrame using the mapping
 df.rename(columns=column_mapping, inplace=True)
@@ -478,12 +497,7 @@ df['FundingSource'] = ''
 df["EstimatedActivityID"] = df["EstimatedTreatmentID"] # ActivityTreatmentID -> EstimatedTreatmentID -> EstimatedActivityID
 
 
-"""Entire list of InFORM Fuels fields"""
-inForm_fields_all = fmap.inform_fields
 
-
-# list of all InFORM Fuels columns, and NFPORS columns for ordering and testing 
-inForm_nfpors_all = fmap.inform_nfpors_ordered()
 
 
 # Iterate over the list of columns to check if they exist in the DataFrame
@@ -504,7 +518,6 @@ df['GUID'] = [str(uuid.uuid4()) for _ in range(len(df))]
 # Write the DataFrame to the output temp1 CSV
 df.to_csv(temp_table1, index=False)
 
-
 # output table name in the file geodatabase
 gis_derivation_table = "InFormFuelsFeatureCsvExtract"
 
@@ -513,9 +526,6 @@ arcpy.TableToTable_conversion(in_rows=temp_table1, out_path=gdb_path, out_name=g
 
 # full path to output table
 gis_derivation_table_fullPath = f'{gdb_path}\\{gis_derivation_table}'
-
-# verify_fields = describe(gis_derivation_table_fullPath)
-
 
 #------------------------------------------------------------------------------------------------------------------------------
 # columns that have a one-to-many relationship and/or need a transformation 
@@ -572,19 +582,15 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, crosswalk_fields) as c
         # Extract values from the current row
         typename = row[0]
         category = row[1] 
-        # print (f"nfpors typename {typename}, category {category}")
 
         # Check if the NFPORS typename exists in the table data dictionary
         for t in table_data:
 
             if typename.upper() == t.upper():
-                # print (f"Match found {t}")
                 # Update Category and Type based on the dictionary values
                 row[0] = table_data[t][1]  # Update Type
                 row[1] = table_data[t][0]  # Update Category
-                # print (f"InFORM Fuels type {row[0]}, category {row[1]}")
                 
-            
         cursor.updateRow(row)
 #------------------------------------------------------------------------------------------------------------------------------
 
@@ -624,11 +630,6 @@ update_fields = [
     "ProjectIsRtrl",    # [32]
     "IsBIL"     # [33]
 ]
-
-# for f in update_fields:
-#    if f not in verify_fields:
-#        print (f"field {f} not in table...")
-
 
 
 # Open an update cursor to loop through the feature class
@@ -766,6 +767,15 @@ Indexed_Points = arcpy.management.AddSpatialIndex(in_features=Points_Feature_Cla
 # Derivation for Jurisdictional Unit
 print (f"Jurisdictional Unit derivations...")
 
+# set department, unit, bureau for all bureaus
+# if bureau is BLM, do an additional derivation to set Units to BLM field units or other units. If none of those
+# exist (which is often) then it will have been set to JU units.
+
+
+
+
+print (f"Setting department, unit, bureau for all bureaus...")
+
 # Unit is set for all bureaus data
 
 # Spatial Join Jurisdictional Agency to Points
@@ -777,7 +787,7 @@ ju_dict = {}
 # Spatial Join Jurisdictional Units fields
 fields = ["GUID", "LandownerDepartment", "JurisdictionalUnitName", "LegendLandownerCategory", ]
 
-# Use a search cursor to iterate through the data and populate the dictionary
+# Iterate through the data and populate the dictionary
 with arcpy.da.SearchCursor("JU_sj", fields) as cursor:
     for row in cursor:
         guid = row[0] 
@@ -806,6 +816,69 @@ with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
         # Update the feature with the new values
         cursor.updateRow(row)
 
+
+# Set BLM Location Units
+if in_bureau == "BLM":
+
+
+
+    # Select points that intersect with BLM field_offices
+    arcpy.MakeFeatureLayer_management(Indexed_Points, "blm_points_lyr")
+    arcpy.SelectLayerByLocation_management("field office count points", "NEW_SELECTION", "INTERSECT", blm_field_offices)
+
+    result = arcpy.GetCount_management("blm_points_lyr")
+    field_office_count = int(result.getOutput(0))
+    
+    # if there are intersections, do a spatial join to get the unit name
+    if field_office_count > 0:
+
+        arcpy.analysis.SpatialJoin(Indexed_Points, blm_field_offices, "field_office_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="GUID \"GUID\" true true false 8000 Text 0 0,First,#,Regions\\InFormFuelsFeatureCsvExtract_Points,GUID,0,8000;ADMU_NAME \"Administrative Unit Name\" true true false 40 Text 0 0,First,#,Location Unit Layers\\blm_natl_admu_field_poly_webpub_1,ADMU_NAME,0,40", match_option="INTERSECT", search_radius="", distance_field_name="")
+       
+    # check for points that intersect BLM other units  
+    arcpy.SelectLayerByLocation_management("blm_points_lyr", "NEW_SELECTION", "INTERSECT", blm_other)
+    result = arcpy.GetCount_management("blm_points_lyr")
+    other_count = int(result.getOutput(0))
+    print(other_count)
+
+    # if other unit intersections occur, do a spatial join to get the unit name
+    if other_count > 0: 
+
+
+        other_dict = {}
+        arcpy.analysis.SpatialJoin("blm_points_lyr", blm_other, "other_units_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="GUID \"GUID\" true true false 8000 Text 0 0,First,#,Regions\\InFormFuelsFeatureCsvExtract_Points,GUID,0,8000;ADMU_NAME \"Administrative Unit Name\" true true false 40 Text 0 0,First,#,Location Unit Layers\\blm_natl_admu_field_poly_webpub_1,ADMU_NAME,0,40", match_option="INTERSECT", search_radius="", distance_field_name="")
+        
+        with arcpy.da.SearchCursor("other_units_sj", ["GUID", "ADMU_NAME"]) as cursor:
+            for row in cursor:
+                other_dict[row[0]] = row[1]
+
+        # add other units to points
+        with arcpy.da.UpdateCursor("field_office_sj", ["GUID", "ADMU_NAME"]) as cursor:
+            for row in cursor:
+                if row[0] in other_dict:
+                    row[1] = other_dict[row[0]]
+                    cursor.updateRow(row)
+
+    # Initialize an empty dictionary
+    blm_units_dict = {}
+
+    with arcpy.da.SearchCursor("other_units_sj", ["GUID", "ADMU_NAME"]) as cursor:
+            for row in cursor:
+                blm_units_dict[row[0]] = row[1]
+
+    # InFORM Fuels fields
+    fields = ["GUID", "Unit"]
+    with arcpy.da.UpdateCursor(gis_derivation_table_fullPath, fields) as cursor:
+        for row in cursor:
+            guid = row[0]
+            if guid in blm_units_dict:
+                # set unit
+                row[1] = blm_units_dict[guid]
+               
+            # Update the feature with the new values
+            cursor.updateRow(row)
+
+
+
 #------------------------------------------------------------------------------------------------------------------------------
 
 # State Derivation
@@ -817,7 +890,7 @@ arcpy.analysis.SpatialJoin(Indexed_Points, states, "states_sj", join_operation="
 state_dict = {}
 fields = ["GUID", "STATE_NAME"]
 
-# Use a search cursor to iterate through the data and populate the dictionary
+# Iterate through the data and populate the dictionary
 with arcpy.da.SearchCursor("states_sj", fields) as cursor:
     for row in cursor:
         guid = row[0] 
@@ -860,7 +933,7 @@ arcpy.analysis.SpatialJoin(Indexed_Points, county, "county_sj", join_operation="
 county_dict = {}
 fields = ["GUID", "CountyName"]
 
-# Use a search cursor to iterate through the data and populate the dictionary
+# Iterate through the data and populate the dictionary
 with arcpy.da.SearchCursor("county_sj", fields) as cursor:
     for row in cursor:
         guid = row[0] 
@@ -888,27 +961,40 @@ print (f"Region derivations...")
 
 
 # regions function
-region_path, region_field = regions(in_bureau, bia_regions, fws_regions)
-print(f"Region path: {region_path}, Region field: {region_field}")
+region_field = regions(in_bureau)
+print(f"Region field: {region_field}")
 
 
 if in_bureau == "BIA":
     # Spatial Join BIA regions to points
+    print (f"Workign on BIA regions...")
     arcpy.analysis.SpatialJoin(Indexed_Points, bia_regions, "regions_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="GUID \"GUID\" true true false 8000 Text 0 0,First,#,InFormFuelsFeatureCsvExtract_Points,GUID,0,8000;REGIONNAME \"REGIONNAME\" true true false 2000000000 Text 0 0,First,#,BIA_Region,REGIONNAME,0,2000000000", match_option="INTERSECT", search_radius="", distance_field_name="")
 
 
 elif in_bureau == "FWS":
     # Spatial Join FWS regions to points
+    print (f"Workign on FWS regions...")
     arcpy.analysis.SpatialJoin(Indexed_Points, fws_regions, "regions_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="GUID \"GUID\" true true false 8000 Text 0 0,First,#,InFormFuelsFeatureCsvExtract_Points,GUID,0,8000;REGNAME \"REGNAME\" true true false 50 Text 0 0,First,#,fws_regions,REGNAME,0,50;Shape_Length \"Shape_Length\" false true true 8 Double 0 0,First,#,fws_regions,Shape_Length,-1,-1;Shape_Area \"Shape_Area\" false true true 8 Double 0 0,First,#,fws_regions,Shape_Area,-1,-1", match_option="INTERSECT", search_radius="", distance_field_name="")
-    # describe("regions_sj")
 
+#elif in_bureau == "NPS":
+    # print (f"Workign on NPS regions...")
+    # Spatial Join NPS regions to points
+
+elif in_bureau == "BLM":
+    # Spatial Join BLM regions to points
+
+    print (f"Workign on BLM regions...")
+    arcpy.analysis.SpatialJoin(Indexed_Points, blm_regions, "regions_sj", join_operation="JOIN_ONE_TO_ONE", join_type="KEEP_ALL", field_mapping="GUID \"GUID\" true true false 8000 Text 0 0,First,#,Regions\\InFormFuelsFeatureCsvExtract_Points,GUID,0,8000;ADMIN_ST \"Administrative State Code\" true true false 2 Text 0 0,First,#,Regions\\blm_regions,ADMIN_ST,0,2;Shape_Length \"Shape_Length\" false true true 8 Double 0 0,First,#,Regions\\blm_regions,Shape_Length,-1,-1;Shape_Area \"Shape_Area\" false true true 8 Double 0 0,First,#,Regions\\blm_regions,Shape_Area,-1,-1", match_option="INTERSECT", search_radius="", distance_field_name="")
+
+
+# Initialize an empty dictionary
 region_dict = {}
 # fields = ["GUID", "REGIONNAME"]
 fields = ["GUID", region_field]
 # print(fields)
 
 
-# Use a search cursor to iterate through the data and populate the dictionary
+# Iterate through the data and populate the dictionary
 with arcpy.da.SearchCursor("regions_sj", fields) as cursor:
     for row in cursor:
         guid = row[0] 
@@ -937,7 +1023,7 @@ arcpy.analysis.SpatialJoin(Indexed_Points, con_districts, "cd_sj", join_operatio
 cd_dict = {}
 fields = ["GUID", "DISTRICTID", "STATE_ABBR"]
 
-# Use a search cursor to iterate through the data and populate the dictionary
+# Iterate through the data and populate the dictionary
 with arcpy.da.SearchCursor("cd_sj", fields) as cursor:
     for row in cursor:
         guid = row[0] 
@@ -1139,7 +1225,7 @@ if in_bureau == "bia":
     # "TRIBE NAME" = full tribe name"NAME_1" is the abbreviated tribe name. 
     fields = ["GUID", "TRIBE_NAME","NAME_1"]
 
-    # Use a search cursor to iterate through the data and populate the dictionary
+    # Iterate through the data and populate the dictionary
     with arcpy.da.SearchCursor("tribes_sj", fields) as cursor:
         for row in cursor:
             guid = row[0] 
